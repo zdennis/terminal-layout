@@ -53,21 +53,22 @@ class Layout
 
         @tree.push cbox
       elsif cbox.display == :block
+        if previous_box && previous_box.display != :block
+          @y += 1
+        end
         @x = starting_x_for_current_y
 
-        if (previous_box && previous_box.display == :inline) || @x >= @box.width
-          @y += 1
-          @x = 0
-        end
-
         cbox.width = (@box.width - @x)
-        new_box = Box.new(cbox.content, children:cbox.children, style: cbox.style)
+        new_box = Box.new("", style: cbox.style)
+        new_box.children = [Box.new(cbox.content, children:[], style: {display: :inline})].concat cbox.children
         new_box.children = Layout.new(new_box, offset_x:@x, offset_y:@y).layout
-        @box.height = (@box.height || 0) + cbox.height + (@box.content.to_s.length / @box.width.to_f).round
-        cbox.x = @x
-        cbox.y = @y
+        new_box.x = @x
+        new_box.y = @y
 
-        @y += cbox.height
+        new_box.height = (new_box.children.map(&:y).max - new_box.y) +  new_box.children.map(&:height).max
+        #@box.height = (@box.height || 0) + new_box.height + (@box.content.to_s.length / @box.width.to_f).round
+
+        @y += new_box.height
         @x = 0
 
         @tree.push new_box
@@ -94,6 +95,9 @@ class Layout
         end
       end
     end
+
+    # binding.pry
+    @box.height = @box.height || (@box.children.map(&:y).max) - (@box.y || 0)
 
     @tree
   end
@@ -203,9 +207,6 @@ class TerminalRenderer
 
     if cbox.children.any?
       render(cbox.children)
-      @x = cbox.x
-      $stdout.puts
-      @y += 1
     end
 
     @x = cbox.x
@@ -217,13 +218,13 @@ class TerminalRenderer
     count = 0
     loop do
       if count >= cbox.content.length
-        log "breaking because count >= cbox.content.length (#{count} >= #{cbox.content.length})  x:#{@x} y:#{@y}"
+        log "breaking because count >= cbox.content.length (#{count} >= #{cbox.content.length})  x:#{@x} y:#{@y}  count:#{count}"
         break
       end
 
       # binding.pry if @x == 10
       if @x > cbox.x && cbox.width > 0 && (@x % (cbox.width + cbox.x)) == 0
-        log "puts because inline content is at width (count % cbox.width) == 0   (#{count} % #{cbox.width}) == 0   x:#{@x} y:#{@y}"
+        log "puts because inline content is at width (count % cbox.width) == 0   (#{count} % #{cbox.width}) == 0   x:#{@x} y:#{@y}   count:#{count}"
         $stdout.puts
         @x = cbox.x
         @y += 1
@@ -257,12 +258,12 @@ end
 
 parent = Box.new(nil,
   children: [
-    Box.new("<"*2, style:{display: :float, float: :left, width:3}),
-    Box.new(">"*2, style:{display: :float, float: :left, width:3}),
-    Box.new("_"*3, style: {display: :inline}),
+    Box.new("<"*10, style:{display: :float, float: :left, width:10}),
+    Box.new(">"*15, style:{display: :float, float: :left, width:15}),
+    Box.new("_"*6, style: {display: :inline}),
     Box.new("A"*20, style: {display: :block}),
-    Box.new("-"*3, style: {display: :inline}),
-    Box.new("~"*3, style: {display: :inline}),
+    Box.new("-"*6, style: {display: :inline}),
+    Box.new("~"*9, style: {display: :inline}),
     Box.new("B", style: {display: :block},
       children: [
         Box.new("b"*10, style: {display: :block}, children:[
@@ -272,13 +273,13 @@ parent = Box.new(nil,
           Box.new("["*3, style: {display: :block})
         ]),
       ]),
-    Box.new("C"*30, style: {display: :block}),
+    Box.new("C"*60, style: {display: :block}),
     Box.new("D"*20, style: {display: :block}),
     Box.new("E"*10, style: {display: :block})
   ],
   style: {
     display: :block,
-    width: 21,
+    width: 60,
     height: nil
   }
 )
