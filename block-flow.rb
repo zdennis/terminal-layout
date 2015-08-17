@@ -1,6 +1,7 @@
 require 'pry'
 
 $z = File.open("/tmp/z.log", "w+")
+$z.sync = true
 
 $stdout.sync = true
 
@@ -11,49 +12,47 @@ class Layout
     @y = offset_y
   end
 
-  def layout_floats(floats)
-    floats.each do |fbox|
-      if fbox.float == :left
-        # only allow the float to be as wide as its parent
-        if fbox.width > @box.width
-          fbox.width = @box.width
-        end
-
-        # if we cannot fit on this line, go to the next
-        if @x + fbox.width > @box.width
-          @x = 0
-          @y += 1
-        end
-
-        fbox.x = @x
-        fbox.y = @y
-
-        Layout.new(fbox, offset_x:@x, offset_y:@y).layout
-
-        @x += fbox.width
+  def layout_float(fbox)
+    if fbox.float == :left
+      # only allow the float to be as wide as its parent
+      if fbox.width > @box.width
+        fbox.width = @box.width
       end
+
+      # if we cannot fit on this line, go to the next
+      if @x + fbox.width > @box.width
+        @x = 0
+        @y += 1
+      end
+
+      fbox.x = @x
+      fbox.y = @y
+
+      Layout.new(fbox, offset_x:@x, offset_y:@y).layout
+
+      @x += fbox.width
     end
   end
 
   def starting_x_for_current_y
     x = 0
     @box.children.select { |cbox| cbox.display == :float }.each do |fbox|
-      next unless fbox.y >= @y && @y <= (fbox.y + fbox.height)
+      next unless fbox.y && fbox.y >= @y && @y <= (fbox.y + fbox.height)
       x = [fbox.x + fbox.width, x].max
     end
     x
   end
 
   def layout
-    floats = @box.children.select { |cbox| cbox.display == :float }
-    layout_floats(floats)
+    @tree = []
 
-    non_floats = @box.children.select { |cbox| cbox.display != :float }
+    @box.children.each_with_index do |cbox, i|
+      previous_box = i > 0 ? @box.children[i - 1] : nil
+      if cbox.display == :float
+        layout_float cbox
 
-    non_floats.each_with_index do |cbox, i|
-      previous_box = i > 0 ? non_floats[i - 1] : nil
-
-      if cbox.display == :block
+        @tree.push cbox
+      elsif cbox.display == :block
         @x = starting_x_for_current_y
 
         if (previous_box && previous_box.display == :inline) || @x >= @box.width
@@ -62,28 +61,48 @@ class Layout
         end
 
         cbox.width = (@box.width - @x)
-        Layout.new(cbox, offset_x:@x, offset_y:@y).layout
+        new_box = Box.new(cbox.content, children:cbox.children, style: cbox.style)
+        new_box.children = Layout.new(new_box, offset_x:@x, offset_y:@y).layout
         @box.height = (@box.height || 0) + cbox.height + (@box.content.to_s.length / @box.width.to_f).round
         cbox.x = @x
         cbox.y = @y
 
         @y += cbox.height
         @x = 0
+
+        @tree.push new_box
       elsif cbox.display == :inline
-        cbox.x = @x
-        cbox.y = @y
-        cbox.width = @box.width
-        @y += (@x + cbox.content.length) / @box.width
-        @x = (@x + cbox.content.length) % @box.width
+        content_i = 0
+        content = ""
+
+        loop do
+          chars_needed = @box.width - @x
+          partial_content = cbox.content[content_i..(content_i + chars_needed)]
+          @tree << Box.new(partial_content, children:[], style: {display: :inline, x:@x, y: @y, width:chars_needed, height:1})
+          content_i += chars_needed
+
+          break if content_i >= cbox.content.length
+
+          @y += 1
+          @x = starting_x_for_current_y
+        end
+
+        # binding.pry if cbox.content =~ /~/
+        # cbox.x = @x
+        # cbox.y = @y
+        # cbox.width = @box.width
+        # lines_needed = (@x + cbox.content.length) / @box.width
+        # @x = (@x + cbox.content.length) % @box.width
+        # @y += lines_needed
       end
     end
 
-    @box.children
+    @tree
   end
 end
 
 class Box
-  attr_reader :children, :style, :content
+  attr_accessor :children, :style, :content
 
   def initialize(content, children:[], style:nil)
     @style = style || { display: :block }
@@ -97,7 +116,7 @@ class Box
   end
 
   def width
-    style[:width] || 0
+    style[:width] || content.length
   end
 
   def height
@@ -126,8 +145,8 @@ end
 parent = Box.new(nil,
   children: [
     Box.new("<"*2, style:{display: :float, float: :left, width:3}),
-    Box.new(">"*2, style:{display: :float, float: :left, width:3}),
     Box.new("A"*20, style: {display: :block}),
+    Box.new(">"*2, style:{display: :float, float: :left, width:3}),
     Box.new("_"*3, style: {display: :inline}),
     Box.new("-"*3, style: {display: :inline}),
     Box.new("~"*3, style: {display: :inline}),
@@ -171,13 +190,24 @@ class TerminalRenderer
       if cbox.display == :block
         render_block cbox
       elsif cbox.display == :inline
-        # if previous_box && previous_box.display == :block
-          # needed_lines = cbox.y - (previous_box.y + previous_box.height) + 1
-          # needed_lines.times{ $stdout.puts }
-          # @y += needed_lines
-        # end
+        if previous_box && previous_box.display == :float
+          @x = cbox.x
+          log "move to column #{@x}"
+          move_to_column @x
+        end
+
+        needed_lines = cbox.y - @y
+        log "inline puts #{needed_lines} times"
+        needed_lines.times{ $stdout.puts }
+        @y = cbox.y
+
         render_inline cbox
       elsif cbox.display == :float
+        needed_lines = cbox.y - @y
+        log "float puts #{needed_lines} times"
+        needed_lines.times{ $stdout.puts }
+        @y = cbox.y
+
         render_float cbox
       end
     end
@@ -187,13 +217,13 @@ class TerminalRenderer
     @x = fbox.x
     log "move to column #{fbox.x}"
     move_to_column fbox.x
-    render_inline Box.new(fbox.content, style:{display: :inline, x:fbox.x, y:fbox.y})
+
+    render_inline Box.new(fbox.content, style:{display: :inline, x:fbox.x + fbox.width, y:fbox.y})
     render(fbox.children)
   end
 
   def render_block(cbox)
     @x = cbox.x
-
     log "move to column #{@x}"
     move_to_column @x
 
@@ -222,6 +252,7 @@ class TerminalRenderer
         break
       end
 
+      # binding.pry if @x == 10
       if @x > cbox.x && cbox.width > 0 && (@x % (cbox.width + cbox.x)) == 0
         log "puts because inline content is at width (count % cbox.width) == 0   (#{count} % #{cbox.width}) == 0   x:#{@x} y:#{@y}"
         $stdout.puts
@@ -256,9 +287,6 @@ end
 layout_tree = Layout.new(parent).layout
 
 
-TerminalRenderer.new.render(layout_tree)
-
-
 def print_tree(tree, indent=0)
   tree.each do |box|
     print " " * indent
@@ -267,7 +295,12 @@ def print_tree(tree, indent=0)
   end
 end
 
+
 print_tree layout_tree
+TerminalRenderer.new.render(layout_tree)
+
+
+# print_tree layout_tree
 # require 'pry'
 # binding.pry
 puts
