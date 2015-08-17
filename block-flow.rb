@@ -258,10 +258,10 @@ end
 
 parent = Box.new(nil,
   children: [
-    Box.new("<"*10, style:{display: :float, float: :left, width:10}),
-    Box.new(">"*15, style:{display: :float, float: :left, width:15}),
-    Box.new("_"*6, style: {display: :inline}),
+    Box.new("<"*5, style:{display: :float, float: :left, width:5}),
+    Box.new(">"*5, style:{display: :float, float: :left, width:5}),
     Box.new("A"*20, style: {display: :block}),
+    Box.new("_"*6, style: {display: :inline}),
     Box.new("-"*6, style: {display: :inline}),
     Box.new("~"*9, style: {display: :inline}),
     Box.new("B", style: {display: :block},
