@@ -78,22 +78,20 @@ class Layout
         loop do
           chars_needed = @box.width - @x
           partial_content = cbox.content[content_i..(content_i + chars_needed)]
+          chars_needed = partial_content.length
           @tree << Box.new(partial_content, children:[], style: {display: :inline, x:@x, y: @y, width:chars_needed, height:1})
+
           content_i += chars_needed
 
+          if @x + chars_needed > @box.width
+            @y += 1
+            @x = starting_x_for_current_y
+          else
+            @x += chars_needed
+          end
+
           break if content_i >= cbox.content.length
-
-          @y += 1
-          @x = starting_x_for_current_y
         end
-
-        # binding.pry if cbox.content =~ /~/
-        # cbox.x = @x
-        # cbox.y = @y
-        # cbox.width = @box.width
-        # lines_needed = (@x + cbox.content.length) / @box.width
-        # @x = (@x + cbox.content.length) % @box.width
-        # @y += lines_needed
       end
     end
 
@@ -142,33 +140,6 @@ class Box
   end
 end
 
-parent = Box.new(nil,
-  children: [
-    Box.new("<"*2, style:{display: :float, float: :left, width:3}),
-    Box.new("A"*20, style: {display: :block}),
-    Box.new(">"*2, style:{display: :float, float: :left, width:3}),
-    Box.new("_"*3, style: {display: :inline}),
-    Box.new("-"*3, style: {display: :inline}),
-    Box.new("~"*3, style: {display: :inline}),
-    Box.new("B", style: {display: :block},
-      children: [
-        Box.new("b"*10, style: {display: :block}, children:[
-          Box.new("*"*3, style: {display: :inline}),
-          Box.new("!"*3, style: {display: :inline}),
-          Box.new("$"*3, style: {display: :inline}),
-          Box.new("["*3, style: {display: :block})
-        ]),
-      ]),
-    Box.new("C"*30, style: {display: :block}),
-    Box.new("D"*20, style: {display: :block}),
-    Box.new("E"*10, style: {display: :block})
-  ],
-  style: {
-    display: :block,
-    width: 10,
-    height: nil
-  }
-)
 
 require 'terminfo'
 class TerminalRenderer
@@ -190,11 +161,9 @@ class TerminalRenderer
       if cbox.display == :block
         render_block cbox
       elsif cbox.display == :inline
-        if previous_box && previous_box.display == :float
-          @x = cbox.x
-          log "move to column #{@x}"
-          move_to_column @x
-        end
+        @x = cbox.x
+        log "move to column #{@x}"
+        move_to_column @x
 
         needed_lines = cbox.y - @y
         log "inline puts #{needed_lines} times"
@@ -283,6 +252,37 @@ class TerminalRenderer
   def move_up_n_rows(n) ; n.times { term_info.control "cuu1" } ; end
   def move_down_n_rows(n) ; n.times { term_info.control "cud1" } ; end
 end
+
+
+
+parent = Box.new(nil,
+  children: [
+    Box.new("<"*2, style:{display: :float, float: :left, width:3}),
+    Box.new(">"*2, style:{display: :float, float: :left, width:3}),
+    Box.new("_"*3, style: {display: :inline}),
+    Box.new("A"*20, style: {display: :block}),
+    Box.new("-"*3, style: {display: :inline}),
+    Box.new("~"*3, style: {display: :inline}),
+    Box.new("B", style: {display: :block},
+      children: [
+        Box.new("b"*10, style: {display: :block}, children:[
+          Box.new("*"*3, style: {display: :inline}),
+          Box.new("!"*3, style: {display: :inline}),
+          Box.new("$"*3, style: {display: :inline}),
+          Box.new("["*3, style: {display: :block})
+        ]),
+      ]),
+    Box.new("C"*30, style: {display: :block}),
+    Box.new("D"*20, style: {display: :block}),
+    Box.new("E"*10, style: {display: :block})
+  ],
+  style: {
+    display: :block,
+    width: 21,
+    height: nil
+  }
+)
+
 
 layout_tree = Layout.new(parent).layout
 
