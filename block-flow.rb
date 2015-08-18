@@ -37,7 +37,7 @@ class Layout
   def starting_x_for_current_y
     x = 0
     @box.children.select { |cbox| cbox.display == :float }.each do |fbox|
-      next unless fbox.y && fbox.y >= @y && @y <= (fbox.y + fbox.height)
+      next unless fbox.y && fbox.y <= @y && (fbox.y + fbox.height) >= @y
       x = [fbox.x + fbox.width, x].max
     end
     x
@@ -53,7 +53,7 @@ class Layout
 
         @tree.push cbox
       elsif cbox.display == :block
-        if previous_box && previous_box.display != :block
+        if previous_box && previous_box.display == :inline
           @y += 1
         end
         @x = starting_x_for_current_y
@@ -73,6 +73,11 @@ class Layout
 
         @tree.push new_box
       elsif cbox.display == :inline
+        if @x == 0
+          @x = starting_x_for_current_y
+        end
+
+
         content_i = 0
         content = ""
 
@@ -96,7 +101,6 @@ class Layout
       end
     end
 
-    # binding.pry
     @box.height = @box.height || (@box.children.map(&:y).max) - (@box.y || 0)
 
     @tree
@@ -191,7 +195,14 @@ class TerminalRenderer
     log "move to column #{fbox.x}"
     move_to_column fbox.x
 
-    render_inline Box.new(fbox.content, style:{display: :inline, x:fbox.x + fbox.width, y:fbox.y})
+    render_inline Box.new(fbox.content, style:{
+      display: :inline,
+      width: fbox.width,
+      height: fbox.height,
+      x:fbox.x,
+      y:fbox.y
+    })
+
     render(fbox.children)
   end
 
@@ -202,7 +213,11 @@ class TerminalRenderer
 
     needed_lines = cbox.y - @y
     log "puts #{needed_lines} times (#{cbox.y} - #{@y})"
-    needed_lines.times { $stdout.puts }
+    if needed_lines >= 0
+      needed_lines.times { $stdout.puts }
+    else
+      move_up_n_rows needed_lines.abs
+    end
     @y = cbox.y
 
     if cbox.children.any?
@@ -216,16 +231,19 @@ class TerminalRenderer
 
   def render_inline(cbox)
     count = 0
+    rel_count = 0
     loop do
       if count >= cbox.content.length
         log "breaking because count >= cbox.content.length (#{count} >= #{cbox.content.length})  x:#{@x} y:#{@y}  count:#{count}"
         break
       end
 
-      # binding.pry if @x == 10
-      if @x > cbox.x && cbox.width > 0 && (@x % (cbox.width + cbox.x)) == 0
+      # binding.pry if cbox.content =~ />/
+      if rel_count >= cbox.width
+      # if @x > cbox.x && cbox.width > 0 && (@x % (cbox.width + cbox.x)) == 0
         log "puts because inline content is at width (count % cbox.width) == 0   (#{count} % #{cbox.width}) == 0   x:#{@x} y:#{@y}   count:#{count}"
         $stdout.puts
+        rel_count = 0
         @x = cbox.x
         @y += 1
       end
@@ -235,6 +253,7 @@ class TerminalRenderer
 
       $stdout.print cbox.content[count]
       count += 1
+      rel_count += 1
       @x += 1
     end
 
@@ -259,7 +278,7 @@ end
 parent = Box.new(nil,
   children: [
     Box.new("<"*5, style:{display: :float, float: :left, width:5}),
-    Box.new(">"*5, style:{display: :float, float: :left, width:5}),
+    Box.new(">"*15, style:{display: :float, float: :left, width:5}),
     Box.new("A"*20, style: {display: :block}),
     Box.new("_"*6, style: {display: :inline}),
     Box.new("-"*6, style: {display: :inline}),
