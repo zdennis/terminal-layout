@@ -76,20 +76,20 @@ class Layout
         if @x == 0
           @x = starting_x_for_current_y
         end
-
+        available_width = @box.width - @x
 
         content_i = 0
         content = ""
 
         loop do
-          chars_needed = @box.width - @x
+          chars_needed = available_width - @x
           partial_content = cbox.content[content_i..(content_i + chars_needed)]
           chars_needed = partial_content.length
           @tree << Box.new(partial_content, children:[], style: {display: :inline, x:@x, y: @y, width:chars_needed, height:1})
 
           content_i += chars_needed
 
-          if @x + chars_needed > @box.width
+          if @x + chars_needed > available_width
             @y += 1
             @x = starting_x_for_current_y
           else
@@ -173,11 +173,6 @@ class TerminalRenderer
         log "move to column #{@x}"
         move_to_column @x
 
-        needed_lines = cbox.y - @y
-        log "inline puts #{needed_lines} times"
-        needed_lines.times{ $stdout.puts }
-        @y = cbox.y
-
         render_inline cbox
       elsif cbox.display == :float
         needed_lines = cbox.y - @y
@@ -232,20 +227,30 @@ class TerminalRenderer
   def render_inline(cbox)
     count = 0
     rel_count = 0
+
+    # make sure we start in the right place
+    log "inline @y: #{@y}"
+    needed_lines =  cbox.y - @y
+    log "inline puts #{needed_lines} times"
+    if needed_lines >= 0
+      needed_lines.times{ $stdout.puts }
+    else
+      move_up_n_rows needed_lines.abs
+    end
+    @y = cbox.y
+
     loop do
       if count >= cbox.content.length
         log "breaking because count >= cbox.content.length (#{count} >= #{cbox.content.length})  x:#{@x} y:#{@y}  count:#{count}"
         break
       end
 
-      # binding.pry if cbox.content =~ />/
       if rel_count >= cbox.width
-      # if @x > cbox.x && cbox.width > 0 && (@x % (cbox.width + cbox.x)) == 0
-        log "puts because inline content is at width (count % cbox.width) == 0   (#{count} % #{cbox.width}) == 0   x:#{@x} y:#{@y}   count:#{count}"
         $stdout.puts
         rel_count = 0
-        @x = cbox.x
         @y += 1
+        @x = cbox.x
+        log "puts because inline content is at width (count % cbox.width) == 0   (#{count} % #{cbox.width}) == 0   x:#{@x} y:#{@y}   count:#{count}"
       end
 
       log "print #{cbox.content[count].inspect}    x:#{@x} y:#{@y} count:#{count}"
@@ -278,8 +283,8 @@ end
 parent = Box.new(nil,
   children: [
     Box.new("<"*5, style:{display: :float, float: :left, width:5}),
-    Box.new(">"*15, style:{display: :float, float: :left, width:5}),
     Box.new("A"*20, style: {display: :block}),
+    Box.new(">"*15, style:{display: :float, float: :left, width:5}),
     Box.new("_"*6, style: {display: :inline}),
     Box.new("-"*6, style: {display: :inline}),
     Box.new("~"*9, style: {display: :inline}),
