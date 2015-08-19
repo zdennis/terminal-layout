@@ -13,12 +13,12 @@ class Layout
   end
 
   def layout_float(fbox)
-    if fbox.float == :left
-      # only allow the float to be as wide as its parent
-      if fbox.width > @box.width
-        fbox.width = @box.width
-      end
+    # only allow the float to be as wide as its parent
+    if fbox.width > @box.width
+      fbox.width = @box.width
+    end
 
+    if fbox.float == :left
       # if we cannot fit on this line, go to the next
       if @x + fbox.width > @box.width
         @x = 0
@@ -31,14 +31,44 @@ class Layout
       Layout.new(fbox, offset_x:@x, offset_y:@y).layout
 
       @x += fbox.width
+    elsif fbox.float == :right
+      # loop in case there are left floats on the left as we move down rows
+      loop do
+        starting_x = starting_x_for_current_y
+        # if we cannot fit on this line, go to the next
+        if starting_x + fbox.width > @box.width
+          @x = 0
+          @y += 1
+        else
+          break
+        end
+      end
+
+      @x = ending_x_for_current_y - fbox.width
+      fbox.x = @x
+      fbox.y = @y
+
+      Layout.new(fbox, offset_x:@x, offset_y:@y).layout
+
+      # reset X back to what it should be
+      @x = starting_x_for_current_y
     end
   end
 
   def starting_x_for_current_y
     x = 0
-    @box.children.select { |cbox| cbox.display == :float }.each do |fbox|
+    @box.children.select { |cbox| cbox.display == :float && cbox.float == :left }.each do |fbox|
       next unless fbox.y && fbox.y <= @y && (fbox.y + fbox.height) >= @y
       x = [fbox.x + fbox.width, x].max
+    end
+    x
+  end
+
+  def ending_x_for_current_y
+    x = @box.width
+    @box.children.select { |cbox| cbox.display == :float && cbox.float == :right }.each do |fbox|
+      next unless fbox.y && fbox.y <= @y && (fbox.y + fbox.height) >= @y
+      x = [fbox.x, x].min
     end
     x
   end
@@ -58,15 +88,14 @@ class Layout
         end
         @x = starting_x_for_current_y
 
-        cbox.width = (@box.width - @x)
-        new_box = Box.new("", style: cbox.style)
+        cbox.width = ending_x_for_current_y - @x
+        new_box = Box.new("", style: cbox.style.merge(width: cbox.width))
         new_box.children = [Box.new(cbox.content, children:[], style: {display: :inline})].concat cbox.children
         new_box.children = Layout.new(new_box, offset_x:@x, offset_y:@y).layout
         new_box.x = @x
         new_box.y = @y
 
         new_box.height = (new_box.children.map(&:y).max - new_box.y) +  new_box.children.map(&:height).max
-        #@box.height = (@box.height || 0) + new_box.height + (@box.content.to_s.length / @box.width.to_f).round
 
         @y += new_box.height
         @x = 0
@@ -76,13 +105,13 @@ class Layout
         if @x == 0
           @x = starting_x_for_current_y
         end
-        available_width = @box.width - @x
+        available_width = ending_x_for_current_y - @x
 
         content_i = 0
         content = ""
 
         loop do
-          chars_needed = available_width - @x
+          chars_needed = available_width
           partial_content = cbox.content[content_i..(content_i + chars_needed)]
           chars_needed = partial_content.length
           @tree << Box.new(partial_content, children:[], style: {display: :inline, x:@x, y: @y, width:chars_needed, height:1})
@@ -283,7 +312,8 @@ end
 parent = Box.new(nil,
   children: [
     Box.new("<"*5, style:{display: :float, float: :left, width:5}),
-    Box.new("A"*20, style: {display: :block}),
+    Box.new("r"*40, style:{display: :float, float: :right, width:20}),
+    Box.new("A"*40, style: {display: :block}),
     Box.new(">"*15, style:{display: :float, float: :left, width:5}),
     Box.new("_"*6, style: {display: :inline}),
     Box.new("-"*6, style: {display: :inline}),
