@@ -152,7 +152,7 @@ module TerminalLayout
         fbox.x = @current_x
         fbox.y = @current_y
 
-        render_object = FloatRenderObject.new(fbox, style: {x: @current_x, y: @current_y, height: fbox.height, float: :left})
+        render_object = render_object_for(fbox, style: {height: fbox.height})
         render_object.layout
 
         @current_x += fbox.width
@@ -174,7 +174,7 @@ module TerminalLayout
         fbox.x = @current_x
         fbox.y = @current_y
 
-        render_object = FloatRenderObject.new(fbox, style: {x: @current_x, y: @current_y, float: :right})
+        render_object = render_object_for(fbox)
         render_object.layout
 
         # reset X back to what it should be
@@ -190,7 +190,7 @@ module TerminalLayout
       when :inline
         InlineRenderObject.new(cbox, content:cbox.content, style: style)
       when :float
-        FloatRenderObject.new(cbox, style: {x: @current_x, y: @current_y, float: cbox.float})
+        FloatRenderObject.new(cbox, style: {x: @current_x, y: @current_y, float: cbox.float}.merge(style))
       end
     end
   end
