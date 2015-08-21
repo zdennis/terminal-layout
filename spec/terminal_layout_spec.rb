@@ -126,5 +126,61 @@ module TerminalLayout
       end
     end
 
+
+    describe "normal float - float left" do
+      subject(:tree){ RenderTree.new(view).layout }
+      let(:view){ Box.new(style: style, children: children) }
+      let(:style){ raise(NotImplementedError, "Must provide :children") }
+      let(:children){ raise(NotImplementedError, "Must provide :children") }
+
+      context "with a single element float left without a width" do
+        let(:style){ {width:10, height: 10} }
+        let(:children){ [float_a] }
+        let(:float_a){ Box.new(style: {display: :float, float: :left}) }
+
+        it "doesn't include the element in the render tree" do
+          expect(tree.length).to eq(0)
+        end
+      end
+
+      context "with a single element float left without a height" do
+        let(:style){ {width:10, height: 10} }
+        let(:children){ [float_a] }
+        let(:float_a){ Box.new(style: {display: :float, float: :left, width: 1}) }
+
+        it "doesn't include the element in the render tree" do
+          expect(tree.length).to eq(0)
+        end
+      end
+
+      context "with a single element float left with a width" do
+        let(:style){ {width:10, height: 10} }
+        let(:children){ [float_a] }
+        let(:float_a){ Box.new(style: {width: 5, height: 1, display: :float, float: :left}) }
+
+        it "includes the element at the left-most position for the current row" do
+          expect(tree.first.position).to eq(Position.new(0, 0))
+          expect(tree.first.size).to eq(Dimension.new(5, 1))
+        end
+
+        it "puts it before block elements on the same line"
+
+        it "puts it before inline elements on the same line"
+      end
+
+      context "with multiple elements floated left" do
+        it "stacks them horizontally next to each other"
+
+        it "puts them before block elements on the same line"
+
+        it "puts them before inline elements on the same line"
+      end
+
+      context "with a floated element that is taller than a single line" do
+        it "causes"
+      end
+
+    end
+
   end
 end

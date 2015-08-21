@@ -3,10 +3,11 @@ module TerminalLayout
   Position = Struct.new(:x, :y)
 
   class RenderObject
-    attr_accessor :style, :children
+    attr_accessor :style, :children, :content
 
-    def initialize(box, style:{x:nil, y:nil})
+    def initialize(box, content:nil, style:{x:nil, y:nil})
       @box = box
+      @content = content
       @children = []
       @style = style
       style[:x] || style[:x] = 0
@@ -52,30 +53,49 @@ module TerminalLayout
     def layout
       self.children = []
 
-      current_x = self.x
-      current_y = self.y
+      @current_x = self.x
+      @current_y = self.y
 
-      @box.children.each do |cbox|
+      if content
+        available_width = ending_x_for_current_y - @current_x
+        new_parent = Box.new(nil, {style: @box.style.dup.merge(width: available_width)})
+        inline_box = Box.new(content, {style: :inline})
+        new_parent.children = [inline_box].concat @box.children
+        children2crawl = [new_parent]
+      else
+        children2crawl = @box.children
+      end
+
+      children2crawl.each do |cbox|
         render_object = render_object_for(cbox)
 
-        if cbox.display == :block
-          current_x = starting_x_for_current_y
-          available_width = ending_x_for_current_y - current_x
+        if cbox.display == :float
+          next if cbox.width.to_i == 0
+
+          render_object = layout_float cbox
+          cbox.height = render_object.height
+
+          next if cbox.height.to_i == 0
+
+          self.children << render_object
+        elsif cbox.display == :block
+          @current_x = starting_x_for_current_y
+          available_width = ending_x_for_current_y - @current_x
 
           render_object.layout
-          render_object.x = current_x
-          render_object.y = current_y
+          render_object.x = @current_x
+          render_object.y = @current_y
           render_object.height = cbox.height
 
           next if [nil, 0].include?(render_object.width) || [nil, 0].include?(render_object.height)
 
-          current_x = 0
-          current_y += [render_object.height, 1].max
+          @current_x = 0
+          @current_y += [render_object.height, 1].max
 
           self.children << render_object
         elsif cbox.display == :inline
-          current_x = starting_x_for_current_y if current_x == 0
-          available_width = ending_x_for_current_y - current_x
+          @current_x = starting_x_for_current_y if @current_x == 0
+          available_width = ending_x_for_current_y - @current_x
 
           content_i = 0
           content = ""
@@ -84,16 +104,16 @@ module TerminalLayout
             chars_needed = available_width
             partial_content = cbox.content[content_i...(content_i + chars_needed)]
             chars_needed = partial_content.length
-            self.children << InlineRenderObject.new(cbox, content:partial_content, style: {display: :inline, x:current_x, y: current_y, width:chars_needed, height:1})
+            self.children << InlineRenderObject.new(cbox, content:partial_content, style: {display: :inline, x:@current_x, y: @current_y, width:chars_needed, height:1})
 
             content_i += chars_needed
 
-            if current_x + chars_needed > available_width
-              current_y += 1
-              current_x = starting_x_for_current_y
-              available_width = ending_x_for_current_y - current_x
+            if @current_x + chars_needed > available_width
+              @current_y += 1
+              @current_x = starting_x_for_current_y
+              available_width = ending_x_for_current_y - @current_x
             else
-              current_x += chars_needed
+              @current_x += chars_needed
             end
 
             break if content_i >= cbox.content.length
@@ -101,10 +121,60 @@ module TerminalLayout
         end
       end
 
-      self.height = [children.map(&:height).max.to_i, 1].max
+      self.height ||= [children.map(&:height).max.to_i, 0].max
 
       self.children
     end
+
+
+    def layout_float(fbox)
+      # only allow the float to be as wide as its parent
+      if fbox.width > @box.width
+        fbox.width = @box.width
+      end
+
+      if fbox.float == :left
+        # if we cannot fit on this line, go to the next
+        if @current_x + fbox.width > @box.width
+          @current_x = 0
+          @current_y += 1
+        end
+
+        fbox.x = @current_x
+        fbox.y = @current_y
+
+        render_object = BlockRenderObject.new(fbox, style: {x: @current_x, y: @current_y, height: fbox.height})
+        render_object.layout
+
+        @current_x += fbox.width
+        return render_object
+      elsif fbox.float == :right
+        # loop in case there are left floats on the left as we move down rows
+        loop do
+          starting_x = starting_x_for_current_y
+          # if we cannot fit on this line, go to the next
+          if starting_x + fbox.width > @box.width
+            @current_x = 0
+            @current_y += 1
+          else
+            break
+          end
+        end
+
+        @current_x = ending_x_for_current_y - fbox.width
+        fbox.x = @current_x
+        fbox.y = @current_y
+
+        render_object = BlockRenderObject.new(fbox, style: {x: @current_x, y: @current_y})
+        render_object.layout
+
+        # reset X back to what it should be
+        @current_x = starting_x_for_current_y
+        return render_object
+      end
+    end
+
+
 
     def render_object_for(cbox)
       case cbox.display
@@ -120,7 +190,7 @@ module TerminalLayout
   end
 
   class BlockRenderObject < RenderObject
-    def initialize(box, style:{x:nil, y:nil})
+    def initialize(*args)
       super
       style.has_key?(:display) || style[:display] = :block
       style.has_key?(:width) || style[:width] = @box.width
@@ -129,30 +199,25 @@ module TerminalLayout
 
   class InlineRenderObject < RenderObject
     attr_accessor :content
-
-    def initialize(box, style:{}, content:"")
-      super(box, style: style)
-      @content = content
-    end
   end
 
   class Layout
     def layout
       laid_out_tree = []
 
-      current_x = @x
-      current_y = @y
+      @current_x = @x
+      @current_y = @y
 
       @box.children.each do |cbox|
         if cbox.display == :block
-          current_x = starting_x_for_current_y
-          available_width = ending_x_for_current_y - current_x
+          @current_x = starting_x_for_current_y
+          available_width = ending_x_for_current_y - @current_x
 
           box2layout = Box.new(style: cbox.style.dup)
           box2layout.width = @box.width
           box2layout.children = cbox.children.dup
-          box2layout.x = current_x
-          box2layout.y = current_y
+          box2layout.x = @current_x
+          box2layout.y = @current_y
           box2layout.children = Layout.new(box2layout).layout
           box2layout.height = cbox.height
 
@@ -170,11 +235,11 @@ module TerminalLayout
           next if [nil, 0].include?(box2layout.width) || [nil, 0].include?(box2layout.height)
 
           laid_out_tree.push box2layout
-          current_x = 0
-          current_y += [box2layout.height, 1].max
+          @current_x = 0
+          @current_y += [box2layout.height, 1].max
         elsif cbox.display == :inline
-          current_x = starting_x_for_current_y if current_x == 0
-          available_width = ending_x_for_current_y - current_x
+          @current_x = starting_x_for_current_y if @current_x == 0
+          available_width = ending_x_for_current_y - @current_x
 
           content_i = 0
           content = ""
@@ -183,16 +248,16 @@ module TerminalLayout
             chars_needed = available_width
             partial_content = cbox.content[content_i...(content_i + chars_needed)]
             chars_needed = partial_content.length
-            laid_out_tree << Box.new(content:partial_content, children:[], style: {display: :inline, x:current_x, y: current_y, width:chars_needed, height:1})
+            laid_out_tree << Box.new(content:partial_content, children:[], style: {display: :inline, x:@current_x, y: @current_y, width:chars_needed, height:1})
 
             content_i += chars_needed
 
-            if current_x + chars_needed > available_width
-              current_y += 1
-              current_x = starting_x_for_current_y
-              available_width = ending_x_for_current_y - current_x
+            if @current_x + chars_needed > available_width
+              @current_y += 1
+              @current_x = starting_x_for_current_y
+              available_width = ending_x_for_current_y - @current_x
             else
-              current_x += chars_needed
+              @current_x += chars_needed
             end
 
             break if content_i >= cbox.content.length
@@ -215,7 +280,7 @@ module TerminalLayout
       initialize_defaults
     end
 
-    %w(width height display x y).each do |method|
+    %w(width height display x y float).each do |method|
       define_method(method){ style[method.to_sym] }
       define_method("#{method}="){ |value| style[method.to_sym] = value }
     end
