@@ -197,44 +197,107 @@ module TerminalLayout
       context "with a float left followed by a block element" do
         let(:style){ {width:10, height: 10} }
         let(:children){ [float_a, block_b] }
-        let(:float_a){  Box.new(style: {width: 5, height: 1, display: :float, float: :left}) }
-        let(:block_b){  Box.new(style: {width: 5, height: 1, display: :block}) }
+        let(:float_a){ Box.new(style: {width: 5, height: 1, display: :float, float: :left}) }
+        let(:block_b){ Box.new(style: {width: 5, height: 1, display: :block}) }
 
         let(:rendered_element_a){ first_rendered(float_a) }
         let(:rendered_element_b){ first_rendered(block_b) }
 
-        it "puts the float left element before the block element on the same line" do
-          # float
-          expect(rendered_element_a.position).to eq(Position.new(0, 0))
-          expect(rendered_element_a.size).to eq(Dimension.new(5, 1))
+        context "and they both fit on the same line" do
+          it "puts the float left element before the block element" do
+            # float
+            expect(rendered_element_a.position).to eq(Position.new(0, 0))
+            expect(rendered_element_a.size).to eq(Dimension.new(5, 1))
 
-          # block
-          expect(rendered_element_b.position).to eq(Position.new(5, 0))
-          expect(rendered_element_b.size).to eq(Dimension.new(5, 1))
+            # block
+            expect(rendered_element_b.position).to eq(Position.new(5, 0))
+            expect(rendered_element_b.size).to eq(Dimension.new(5, 1))
+          end
+        end
+
+        context "and they do not fit on the same line" do
+          before do
+            block_b.width = 6
+          end
+
+          it "puts the block element on the next line when they both dont fit" do
+            # float
+            expect(rendered_element_a.position).to eq(Position.new(0, 0))
+            expect(rendered_element_a.size).to eq(Dimension.new(5, 1))
+
+            # block
+            expect(rendered_element_b.position).to eq(Position.new(0, 1))
+            expect(rendered_element_b.size).to eq(Dimension.new(6, 1))
+          end
         end
       end
 
       context "with a float left followed by an block" do
         let(:style){ {width:10, height: 10} }
-        let(:children){ [float_a, inline_b, block_c] }
-        let(:float_a){  Box.new(style: {width: 5, height: 1, display: :float, float: :left}) }
+        let(:children){ [float_a, inline_b] }
+        let(:float_a){ Box.new(style: {width: 5, height: 1, display: :float, float: :left}) }
+        let(:inline_b){ Box.new(content: "ABCD", style: {height: 1, display: :inline}) }
 
-        it "puts it before inline elements on the same line" do
+        let(:rendered_element_a){ first_rendered(float_a) }
+        let(:rendered_element_b){ first_rendered(inline_b) }
 
+        context "and they both fit on the same line" do
+          it "puts it before inline elements on the same line" do
+            # float
+            expect(rendered_element_a.position).to eq(Position.new(0, 0))
+            expect(rendered_element_a.size).to eq(Dimension.new(5, 1))
 
+            # inline
+            expect(rendered_element_b.position).to eq(Position.new(5, 0))
+            expect(rendered_element_b.size).to eq(Dimension.new(4, 1))
+          end
+        end
+
+        context "and they do not fit on the same line" do
+          before do
+            inline_b.content = "ABCDEFGHIJ"
+          end
+
+          let(:rendered_elements_b){ all_rendered(inline_b) }
+
+          it "puts wraps the text onto the next line" do
+            # float
+            expect(rendered_element_a.position).to eq(Position.new(0, 0))
+            expect(rendered_element_a.size).to eq(Dimension.new(5, 1))
+
+            # inline
+            expect(rendered_elements_b[0].position).to eq(Position.new(5, 0))
+            expect(rendered_elements_b[0].size).to eq(Dimension.new(5, 1))
+
+            expect(rendered_elements_b[1].position).to eq(Position.new(0, 1))
+            expect(rendered_elements_b[1].size).to eq(Dimension.new(5, 1))
+          end
         end
       end
 
       context "with multiple elements floated left" do
-        it "stacks them horizontally next to each other"
+        let(:style){ {width:10, height: 10} }
+        let(:children){ [float_a, float_b, float_c, float_d] }
+        let(:float_a){ Box.new(style: {width: 3, height: 1, display: :float, float: :left}) }
+        let(:float_b){ Box.new(style: {width: 3, height: 1, display: :float, float: :left}) }
+        let(:float_c){ Box.new(style: {width: 3, height: 1, display: :float, float: :left}) }
+        let(:float_d){ Box.new(style: {width: 3, height: 1, display: :float, float: :left}) }
 
-        it "puts them before block elements on the same line"
+        let(:rendered_element_a){ first_rendered(float_a) }
+        let(:rendered_element_b){ first_rendered(float_b) }
+        let(:rendered_element_c){ first_rendered(float_c) }
+        let(:rendered_element_d){ first_rendered(float_d) }
 
-        it "puts them before inline elements on the same line"
+        it "places them horizontally next to each other" do
+          expect(rendered_element_a.position).to eq(Position.new(0, 0))
+          expect(rendered_element_b.position).to eq(Position.new(3, 0))
+          expect(rendered_element_c.position).to eq(Position.new(6, 0))
+          expect(rendered_element_d.position).to eq(Position.new(0, 1))
+        end
       end
 
       context "with a floated element that is taller than a single line" do
-        it "causes"
+        it "spans multiple lines"
       end
 
     end

@@ -17,7 +17,8 @@ module TerminalLayout
     def starting_x_for_current_y
       children.map do |child|
         next unless child.float == :left
-        next unless child.y && child.y <= @current_y && (child.y + child.height) >= @current_y
+        next unless child.y && child.y <= @current_y && (child.y + child.height - 1) >= @current_y
+
         [child.x + child.width, x].max
       end.compact.max || 0
     end
@@ -90,7 +91,13 @@ module TerminalLayout
           @current_x = starting_x_for_current_y
           available_width = ending_x_for_current_y - @current_x
 
-          render_object = render_object_for(cbox, style: {width: available_width})
+          if cbox.width && cbox.width > available_width
+            @current_y += 1
+            @current_x = starting_x_for_current_y
+            available_width = ending_x_for_current_y - @current_x
+          end
+
+          render_object = render_object_for(cbox, style: {width: (cbox.width || available_width)})
           render_object.layout
           render_object.x = @current_x
           render_object.y = @current_y
@@ -134,7 +141,6 @@ module TerminalLayout
 
       self.children
     end
-
 
     def layout_float(fbox)
       # only allow the float to be as wide as its parent
