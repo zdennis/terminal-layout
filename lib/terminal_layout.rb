@@ -2,16 +2,141 @@ module TerminalLayout
   Dimension = Struct.new(:width, :height)
   Position = Struct.new(:x, :y)
 
-  class Layout
-    def initialize(box, offset_x:0, offset_y:0)
+  class RenderObject
+    attr_accessor :style, :children
+
+    def initialize(box, style:{x:nil, y:nil})
       @box = box
-      @x = offset_x
-      @y = offset_y
+      @children = []
+      @style = style
+      style[:x] || style[:x] = 0
+      style[:y] || style[:y] = 0
     end
 
     def starting_x_for_current_y ; 0; end
     def ending_x_for_current_y ; @box.width ; end
 
+    %w(width height display x y).each do |method|
+      define_method(method){ style[method.to_sym] }
+      define_method("#{method}="){ |value| style[method.to_sym] = value }
+    end
+
+    def position
+      Position.new(x, y)
+    end
+
+    def size
+      Dimension.new(width, height)
+    end
+
+    def width
+      style[:width]
+    end
+
+    def height
+      style[:height]
+    end
+
+    def inspect
+      to_s
+    end
+
+    def to_str
+      to_s
+    end
+
+    def to_s
+      "<#{self.class.name} position=(#{x},#{y}) dimensions=#{width}x#{height} content=#{@box.content}/>"
+    end
+
+    def layout
+      self.children = []
+
+      current_x = self.x
+      current_y = self.y
+
+      @box.children.each do |cbox|
+        render_object = render_object_for(cbox)
+
+        if cbox.display == :block
+          current_x = starting_x_for_current_y
+          available_width = ending_x_for_current_y - current_x
+
+          render_object.layout
+          render_object.x = current_x
+          render_object.y = current_y
+          render_object.height = cbox.height
+
+          next if [nil, 0].include?(render_object.width) || [nil, 0].include?(render_object.height)
+
+          current_x = 0
+          current_y += [render_object.height, 1].max
+
+          self.children << render_object
+        elsif cbox.display == :inline
+          current_x = starting_x_for_current_y if current_x == 0
+          available_width = ending_x_for_current_y - current_x
+
+          content_i = 0
+          content = ""
+
+          loop do
+            chars_needed = available_width
+            partial_content = cbox.content[content_i...(content_i + chars_needed)]
+            chars_needed = partial_content.length
+            self.children << InlineRenderObject.new(cbox, content:partial_content, style: {display: :inline, x:current_x, y: current_y, width:chars_needed, height:1})
+
+            content_i += chars_needed
+
+            if current_x + chars_needed > available_width
+              current_y += 1
+              current_x = starting_x_for_current_y
+              available_width = ending_x_for_current_y - current_x
+            else
+              current_x += chars_needed
+            end
+
+            break if content_i >= cbox.content.length
+          end
+        end
+      end
+
+      self.height = [children.map(&:height).max.to_i, 1].max
+
+      self.children
+    end
+
+    def render_object_for(cbox)
+      case cbox.display
+      when :block
+        BlockRenderObject.new(cbox, style: {width:@box.width})
+      when :inline
+        InlineRenderObject.new(cbox, content:cbox.content)
+      end
+    end
+  end
+
+  class RenderTree < RenderObject
+  end
+
+  class BlockRenderObject < RenderObject
+    def initialize(box, style:{x:nil, y:nil})
+      super
+      style.has_key?(:display) || style[:display] = :block
+      style.has_key?(:width) || style[:width] = @box.width
+    end
+  end
+
+  class InlineRenderObject < RenderObject
+    attr_accessor :content
+
+    def initialize(box, style:{}, content:"")
+      super(box, style: style)
+      @content = content
+    end
+  end
+
+  class Layout
     def layout
       laid_out_tree = []
 

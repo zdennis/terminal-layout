@@ -1,20 +1,27 @@
 require 'spec_helper'
 require 'pry'
 
-  def print_tree(tree, indent=0)
-    tree.each do |box|
-      print " " * indent
-      puts box
-      print_tree box.children, indent + 2
-    end
+def print_tree(tree, indent=0)
+  tree.each do |box|
+    print " " * indent
+    puts box
+    print_tree box.children, indent + 2
   end
-
+end
 
 module TerminalLayout
 
   describe "Laying things out" do
+    after(:each) do |example|
+      if example.exception
+        puts
+        puts " #{example.location} #{example.description}"
+        print_tree tree
+      end
+    end
+
     describe "normal block flow - vertical stacking" do
-      subject(:tree){ Layout.new(view).layout }
+      subject(:tree){ RenderTree.new(view).layout }
       let(:view){ Box.new(style: style, children: children) }
       let(:style){ raise(NotImplementedError, "Must provide :children") }
       let(:children){ raise(NotImplementedError, "Must provide :children") }
