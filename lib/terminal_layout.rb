@@ -3,7 +3,7 @@ module TerminalLayout
   Position = Struct.new(:x, :y)
 
   class RenderObject
-    attr_accessor :style, :children, :content
+    attr_accessor :box, :style, :children, :content
 
     def initialize(box, content:nil, style:{x:nil, y:nil})
       @box = box
@@ -14,10 +14,19 @@ module TerminalLayout
       style[:y] || style[:y] = 0
     end
 
-    def starting_x_for_current_y ; 0; end
-    def ending_x_for_current_y ; @box.width ; end
+    def starting_x_for_current_y
+      children.map do |child|
+        next unless child.float == :left
+        next unless child.y && child.y <= @current_y && (child.y + child.height) >= @current_y
+        [child.x + child.width, x].max
+      end.compact.max || 0
+    end
 
-    %w(width height display x y).each do |method|
+    def ending_x_for_current_y
+      @box.width
+    end
+
+    %w(width height display x y float).each do |method|
       define_method(method){ style[method.to_sym] }
       define_method("#{method}="){ |value| style[method.to_sym] = value }
     end
@@ -67,7 +76,6 @@ module TerminalLayout
       end
 
       children2crawl.each do |cbox|
-        render_object = render_object_for(cbox)
 
         if cbox.display == :float
           next if cbox.width.to_i == 0
@@ -82,6 +90,7 @@ module TerminalLayout
           @current_x = starting_x_for_current_y
           available_width = ending_x_for_current_y - @current_x
 
+          render_object = render_object_for(cbox, style: {width: available_width})
           render_object.layout
           render_object.x = @current_x
           render_object.y = @current_y
@@ -143,7 +152,7 @@ module TerminalLayout
         fbox.x = @current_x
         fbox.y = @current_y
 
-        render_object = BlockRenderObject.new(fbox, style: {x: @current_x, y: @current_y, height: fbox.height})
+        render_object = FloatRenderObject.new(fbox, style: {x: @current_x, y: @current_y, height: fbox.height, float: :left})
         render_object.layout
 
         @current_x += fbox.width
@@ -165,7 +174,7 @@ module TerminalLayout
         fbox.x = @current_x
         fbox.y = @current_y
 
-        render_object = BlockRenderObject.new(fbox, style: {x: @current_x, y: @current_y})
+        render_object = FloatRenderObject.new(fbox, style: {x: @current_x, y: @current_y, float: :right})
         render_object.layout
 
         # reset X back to what it should be
@@ -174,14 +183,14 @@ module TerminalLayout
       end
     end
 
-
-
-    def render_object_for(cbox)
+    def render_object_for(cbox, style:{})
       case cbox.display
       when :block
-        BlockRenderObject.new(cbox, style: {width:@box.width})
+        BlockRenderObject.new(cbox, style: {width:@box.width}.merge(style))
       when :inline
-        InlineRenderObject.new(cbox, content:cbox.content)
+        InlineRenderObject.new(cbox, content:cbox.content, style: style)
+      when :float
+        FloatRenderObject.new(cbox, style: {x: @current_x, y: @current_y, float: cbox.float})
       end
     end
   end
@@ -197,8 +206,10 @@ module TerminalLayout
     end
   end
 
+  class FloatRenderObject < BlockRenderObject
+  end
+
   class InlineRenderObject < RenderObject
-    attr_accessor :content
   end
 
   class Layout
