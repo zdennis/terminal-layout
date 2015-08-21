@@ -73,6 +73,13 @@ module TerminalLayout
           expect(tree.length).to eq(0)
         end
       end
+    end
+
+    describe "normal flow - inline elements" do
+      subject(:tree){ RenderTree.new(view).layout }
+      let(:view){ Box.new(style: style, children: children) }
+      let(:style){ raise(NotImplementedError, "Must provide :children") }
+      let(:children){ raise(NotImplementedError, "Must provide :children") }
 
       context "with multiple inline children that fit within the width of the parent" do
         let(:style){ {width:10, height: 10} }
@@ -117,7 +124,6 @@ module TerminalLayout
           expect(tree[2].size).to eq(Dimension.new(5, 1))
         end
       end
-
     end
 
   end
