@@ -29,7 +29,7 @@ module TerminalLayout
         next unless child.y && child.y <= @current_y && (child.y + child.height - 1) >= @current_y
 
         [child.x, @box.width].min
-      end.compact.min || @box.width
+      end.compact.min || self.width || @box.width
     end
 
     %w(width height display x y float).each do |method|
