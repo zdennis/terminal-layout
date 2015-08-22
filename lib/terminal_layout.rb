@@ -246,17 +246,6 @@ module TerminalLayout
           box2layout.children = Layout.new(box2layout).layout
           box2layout.height = cbox.height
 
-          # new_box = Box.new("", style: cbox.style.merge(width: cbox.width))
-          # new_box.children = [Box.new(cbox.content, children:[], style: {display: :inline})].concat cbox.children
-          # new_box.children = Layout.new(new_box, offset_x:@x, offset_y:@y).layout
-          # new_box.x = @x
-          # new_box.y = @y
-          #
-          # new_box.height = (new_box.children.map(&:y).max - new_box.y) +  new_box.children.map(&:height).max
-          #
-          # @y += new_box.height
-          # @x = 0
-
           next if [nil, 0].include?(box2layout.width) || [nil, 0].include?(box2layout.height)
 
           laid_out_tree.push box2layout
