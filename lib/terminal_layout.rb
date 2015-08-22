@@ -68,8 +68,8 @@ module TerminalLayout
     def layout
       self.children = []
 
-      @current_x = self.x
-      @current_y = self.y
+      @current_x = 0
+      @current_y = 0
 
       if content
         available_width = ending_x_for_current_y - @current_x
@@ -82,7 +82,6 @@ module TerminalLayout
       end
 
       children2crawl.each do |cbox|
-
         if cbox.display == :float
           next if cbox.width.to_i == 0
 
@@ -142,7 +141,14 @@ module TerminalLayout
         end
       end
 
-      self.height ||= [children.map(&:height).max.to_i, 0].max
+      if children.length >= 2
+        last_child = children.max{ |child| child.y }
+        self.height = last_child.y + last_child.height
+      elsif children.length == 1
+        self.height = self.children.first.height
+      else
+        self.height = @box.height || 0
+      end
 
       self.children
     end
@@ -324,7 +330,7 @@ module TerminalLayout
     end
 
     def to_s
-      "<Box position=(#{x},#{y})  dimensions=#{width}x#{height} display=#{display.inspect} content=#{content}/>"
+      "<Box##{object_id} position=(#{x},#{y})  dimensions=#{width}x#{height} display=#{display.inspect} content=#{content}/>"
     end
 
     private

@@ -38,12 +38,12 @@ module TerminalLayout
     let(:style){ raise(NotImplementedError, "Must provide :children") }
     let(:children){ raise(NotImplementedError, "Must provide :children") }
 
-    def first_rendered(box)
-      find_first_in_tree(render_tree, ->(node){ node.box == box })
+    def first_rendered(box, parent: render_tree)
+      find_first_in_tree(parent, ->(node){ node.box == box })
     end
 
-    def all_rendered(box)
-      find_all_in_tree(render_tree, ->(node){ node.box == box })
+    def all_rendered(box, parent: render_tree)
+      find_all_in_tree(parent, ->(node){ node.box == box })
     end
 
     after(:each) do |example|
@@ -178,6 +178,47 @@ module TerminalLayout
 
         it "doesn't include the element in the render render_tree" do
           expect(render_tree.children.length).to eq(0)
+        end
+      end
+
+      context "a float left element without a height that has a block child" do
+        let(:style){ {width:10, height: 10} }
+        let(:children){ [float_a] }
+        let(:float_a){ Box.new(style: {display: :float, float: :left, width: 1}, children: [block_b]) }
+        let(:block_b){ Box.new(style: {width: 5, height: 1, display: :block}) }
+
+        let(:rendered_element_a){ first_rendered(float_a) }
+
+        it "gets its height from its children" do
+          expect(rendered_element_a.height).to eq(1)
+        end
+      end
+
+      context "a float left element without a height that has multiple block children" do
+        let(:style){ {width:10, height: 10} }
+        let(:children){ [float_a] }
+        let(:float_a){ Box.new(style: {display: :float, float: :left, width: 10}, children: [block_b, block_c]) }
+        let(:block_b){ Box.new(style: {width: 5, height: 1, display: :block}) }
+        let(:block_c){ Box.new(style: {width: 5, height: 4, display: :block}) }
+
+        let(:rendered_element_a){ first_rendered(float_a) }
+
+        it "gets its height from its children" do
+          expect(rendered_element_a.height).to eq(5)
+        end
+      end
+
+      context "a float left element without a height that has inline children" do
+        let(:style){ {width:10, height: 10} }
+        let(:children){ [float_a] }
+        let(:float_a){ Box.new(style: {display: :float, float: :left, width: 5}, children: [inline_b]) }
+        let(:inline_b){ Box.new(content: "ABCDEFGHIJK", style: {display: :inline}) }
+
+        let(:rendered_element_a){ first_rendered(float_a) }
+
+        it "gets its height from its children" do
+          # Line 1: ABCDE, Line 2: FGHIJ, Line 3: K
+          expect(rendered_element_a.height).to eq(3)
         end
       end
 
@@ -323,6 +364,50 @@ module TerminalLayout
           expect(rendered_element_c.size).to eq(Dimension.new(3, 2))
         end
       end
+
+      context "nested floats" do
+        let(:style){ {width:10, height: 10} }
+        let(:children){ [float_a] }
+        let(:float_a){ Box.new(style: {width: 3, height: 5, display: :float, float: :left}, children: [
+          float_b
+        ])}
+        let(:float_b){ Box.new(style: {width: 3, height: 5, display: :float, float: :left}, children: [
+          float_c
+        ])}
+        let(:float_c){ Box.new(style: {width: 3, height: 5, display: :float, float: :left}, children: [
+          float_d,
+          block_e
+        ])}
+        let(:float_d){ Box.new(style: {width: 2, height: 5, display: :float, float: :left}) }
+        let(:block_e){ Box.new(style: {width: 1, height: 5, display: :block}) }
+
+        let(:rendered_element_a){ first_rendered(float_a) }
+        let(:rendered_element_b){ first_rendered(float_b, parent: rendered_element_a) }
+        let(:rendered_element_c){ first_rendered(float_c, parent: rendered_element_b) }
+        let(:rendered_element_d){ first_rendered(float_d, parent: rendered_element_c) }
+        let(:rendered_element_e){ first_rendered(block_e, parent: rendered_element_c) }
+
+        it "nests properly by aligning left elements to the left-most position" do
+          expect(rendered_element_a.position).to eq(Position.new(0, 0))
+          expect(rendered_element_a.size).to eq(Dimension.new(3, 5))
+
+          expect(rendered_element_b.position).to eq(Position.new(0, 0))
+          expect(rendered_element_b.size).to eq(Dimension.new(3, 5))
+
+          expect(rendered_element_c.position).to eq(Position.new(0, 0))
+          expect(rendered_element_c.size).to eq(Dimension.new(3, 5))
+        end
+
+        it "still floats and positions elements correctly when nested" do
+          # float
+          expect(rendered_element_d.position).to eq(Position.new(0, 0))
+          expect(rendered_element_d.size).to eq(Dimension.new(2, 5))
+
+          # block gets placed beside the float
+          expect(rendered_element_e.position).to eq(Position.new(2, 0))
+          expect(rendered_element_e.size).to eq(Dimension.new(1, 5))
+        end
+      end
     end
 
     describe "normal flow - float right" do
@@ -356,6 +441,47 @@ module TerminalLayout
         it "includes the element at the right-most position minus its width for the current row" do
           expect(rendered_element_a.position).to eq(Position.new(5, 0))
           expect(rendered_element_a.size).to eq(Dimension.new(5, 1))
+        end
+      end
+
+      context "a float right element without a height that has a block child" do
+        let(:style){ {width:10, height: 10} }
+        let(:children){ [float_a] }
+        let(:float_a){ Box.new(style: {display: :float, float: :right, width: 1}, children: [block_b]) }
+        let(:block_b){ Box.new(style: {width: 5, height: 1, display: :block}) }
+
+        let(:rendered_element_a){ first_rendered(float_a) }
+
+        it "gets its height from its children" do
+          expect(rendered_element_a.height).to eq(1)
+        end
+      end
+
+      context "a float right element without a height that has multiple block children" do
+        let(:style){ {width:10, height: 10} }
+        let(:children){ [float_a] }
+        let(:float_a){ Box.new(style: {display: :float, float: :right, width: 10}, children: [block_b, block_c]) }
+        let(:block_b){ Box.new(style: {width: 5, height: 1, display: :block}) }
+        let(:block_c){ Box.new(style: {width: 5, height: 4, display: :block}) }
+
+        let(:rendered_element_a){ first_rendered(float_a) }
+
+        it "gets its height from its children" do
+          expect(rendered_element_a.height).to eq(5)
+        end
+      end
+
+      context "a float right element without a height that has inline children" do
+        let(:style){ {width:10, height: 10} }
+        let(:children){ [float_a] }
+        let(:float_a){ Box.new(style: {display: :float, float: :right, width: 5}, children: [inline_b]) }
+        let(:inline_b){ Box.new(content: "ABCDEFGHIJK", style: {display: :inline}) }
+
+        let(:rendered_element_a){ first_rendered(float_a) }
+
+        it "gets its height from its children" do
+          # Line 1: ABCDE, Line 2: FGHIJ, Line 3: K
+          expect(rendered_element_a.height).to eq(3)
         end
       end
 
@@ -488,6 +614,51 @@ module TerminalLayout
           expect(rendered_element_c.size).to eq(Dimension.new(3, 2))
         end
       end
+
+      context "nested floats" do
+        let(:style){ {width:10, height: 10} }
+        let(:children){ [float_a] }
+        let(:float_a){ Box.new(style: {width: 7, height: 5, display: :float, float: :right}, children: [
+          float_b
+        ])}
+        let(:float_b){ Box.new(style: {width: 6, height: 5, display: :float, float: :right}, children: [
+          float_c
+        ])}
+        let(:float_c){ Box.new(style: {width: 5, height: 5, display: :float, float: :right}, children: [
+          float_d,
+          block_e
+        ])}
+        let(:float_d){ Box.new(style: {width: 2, height: 5, display: :float, float: :right}) }
+        let(:block_e){ Box.new(style: {width: 1, height: 5, display: :block}) }
+
+        let(:rendered_element_a){ first_rendered(float_a) }
+        let(:rendered_element_b){ first_rendered(float_b, parent: rendered_element_a) }
+        let(:rendered_element_c){ first_rendered(float_c, parent: rendered_element_b) }
+        let(:rendered_element_d){ first_rendered(float_d, parent: rendered_element_c) }
+        let(:rendered_element_e){ first_rendered(block_e, parent: rendered_element_c) }
+
+        it "nests properly by aligning right elements to the right-most position" do
+          expect(rendered_element_a.position).to eq(Position.new(3, 0))
+          expect(rendered_element_a.size).to eq(Dimension.new(7, 5))
+
+          expect(rendered_element_b.position).to eq(Position.new(1, 0))
+          expect(rendered_element_b.size).to eq(Dimension.new(6, 5))
+
+          expect(rendered_element_c.position).to eq(Position.new(1, 0))
+          expect(rendered_element_c.size).to eq(Dimension.new(5, 5))
+        end
+
+        it "still floats and positions elements correctly when nested" do
+          # float
+          expect(rendered_element_d.position).to eq(Position.new(3, 0))
+          expect(rendered_element_d.size).to eq(Dimension.new(2, 5))
+
+          # block gets placed beside the float
+          expect(rendered_element_e.position).to eq(Position.new(0, 0))
+          expect(rendered_element_e.size).to eq(Dimension.new(1, 5))
+        end
+      end
+
     end
 
   end
