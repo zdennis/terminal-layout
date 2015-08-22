@@ -67,6 +67,18 @@ module TerminalLayout
         end
       end
 
+      context "block with content" do
+        let(:style){ {width:10, height: 10} }
+        let(:children){ [block_a] }
+        let(:block_a){ Box.new(content: "Foobar", style: {display: :block}) }
+        let(:rendered_element){ first_rendered(block_a) }
+
+        it "sets the height" do
+          expect(rendered_element.position).to eq(Position.new(0, 0))
+          expect(rendered_element.size).to eq(Dimension.new(10, 1))
+        end
+      end
+
       context "with multiple block children" do
         let(:style){ {width:10, height: 10} }
         let(:children){ [block_a, block_b] }

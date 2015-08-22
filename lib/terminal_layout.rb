@@ -71,10 +71,11 @@ module TerminalLayout
       @current_x = 0
       @current_y = 0
 
-      if content
-        available_width = ending_x_for_current_y - @current_x
-        new_parent = Box.new(nil, {style: @box.style.dup.merge(width: available_width)})
-        inline_box = Box.new(content, {style: :inline})
+      if @box.display == :block && content
+        ending_x = ending_x_for_current_y
+        available_width = ending_x - @current_x
+        new_parent = Box.new(content:nil, style: @box.style.dup.merge(width: available_width))
+        inline_box = Box.new(content: content, style: {display: :inline})
         new_parent.children = [inline_box].concat @box.children
         children2crawl = [new_parent]
       else
@@ -101,11 +102,14 @@ module TerminalLayout
             available_width = ending_x_for_current_y - @current_x
           end
 
-          render_object = render_object_for(cbox, style: {width: (cbox.width || available_width)})
+          render_object = render_object_for(cbox, content:cbox.content, style: {width: (cbox.width || available_width)})
           render_object.layout
           render_object.x = @current_x
           render_object.y = @current_y
-          render_object.height = cbox.height
+
+          if cbox.height
+            render_object.height = cbox.height
+          end
 
           next if [nil, 0].include?(render_object.width) || [nil, 0].include?(render_object.height)
 
@@ -206,11 +210,11 @@ module TerminalLayout
     def render_object_for(cbox, content:nil, style:{})
       case cbox.display
       when :block
-        BlockRenderObject.new(cbox, style: {width:@box.width}.merge(style))
+        BlockRenderObject.new(cbox, content: content, style: {width:@box.width}.merge(style))
       when :inline
         InlineRenderObject.new(cbox, content: content, style: style)
       when :float
-        FloatRenderObject.new(cbox, style: {x: @current_x, y: @current_y, float: cbox.float}.merge(style))
+        FloatRenderObject.new(cbox, content: content, style: {x: @current_x, y: @current_y, float: cbox.float}.merge(style))
       end
     end
   end
