@@ -24,7 +24,12 @@ module TerminalLayout
     end
 
     def ending_x_for_current_y
-      @box.width
+      children.map do |child|
+        next unless child.float == :right
+        next unless child.y && child.y <= @current_y && (child.y + child.height - 1) >= @current_y
+
+        [child.x, @box.width].min
+      end.compact.min || @box.width
     end
 
     %w(width height display x y float).each do |method|
@@ -57,7 +62,7 @@ module TerminalLayout
     end
 
     def to_s
-      "<#{self.class.name} position=(#{x},#{y}) dimensions=#{width}x#{height} content=#{@box.content}/>"
+      "<#{self.class.name} position=(#{x},#{y}) dimensions=#{width}x#{height} content=#{content}/>"
     end
 
     def layout
@@ -120,11 +125,11 @@ module TerminalLayout
             chars_needed = available_width
             partial_content = cbox.content[content_i...(content_i + chars_needed)]
             chars_needed = partial_content.length
-            self.children << InlineRenderObject.new(cbox, content:partial_content, style: {display: :inline, x:@current_x, y: @current_y, width:chars_needed, height:1})
+            self.children << render_object_for(cbox, content:partial_content, style: {display: :inline, x:@current_x, y: @current_y, width:chars_needed, height:1})
 
             content_i += chars_needed
 
-            if @current_x + chars_needed > available_width
+            if @current_x + chars_needed >= available_width
               @current_y += 1
               @current_x = starting_x_for_current_y
               available_width = ending_x_for_current_y - @current_x
@@ -167,8 +172,11 @@ module TerminalLayout
         # loop in case there are left floats on the left as we move down rows
         loop do
           starting_x = starting_x_for_current_y
+          available_width = ending_x_for_current_y - starting_x
+
           # if we cannot fit on this line, go to the next
-          if starting_x + fbox.width > @box.width
+          width_needed = starting_x + fbox.width
+          if width_needed > available_width
             @current_x = 0
             @current_y += 1
           else
@@ -180,7 +188,7 @@ module TerminalLayout
         fbox.x = @current_x
         fbox.y = @current_y
 
-        render_object = render_object_for(fbox)
+        render_object = render_object_for(fbox, style: {height: fbox.height})
         render_object.layout
 
         # reset X back to what it should be
@@ -189,12 +197,12 @@ module TerminalLayout
       end
     end
 
-    def render_object_for(cbox, style:{})
+    def render_object_for(cbox, content:nil, style:{})
       case cbox.display
       when :block
         BlockRenderObject.new(cbox, style: {width:@box.width}.merge(style))
       when :inline
-        InlineRenderObject.new(cbox, content:cbox.content, style: style)
+        InlineRenderObject.new(cbox, content: content, style: style)
       when :float
         FloatRenderObject.new(cbox, style: {x: @current_x, y: @current_y, float: cbox.float}.merge(style))
       end
