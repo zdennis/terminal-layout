@@ -71,11 +71,11 @@ module TerminalLayout
       @current_x = 0
       @current_y = 0
 
-      if @box.display == :block && content
+      if @box.display == :block && @box.content.to_s.length > 0
         ending_x = ending_x_for_current_y
         available_width = ending_x - @current_x
-        new_parent = Box.new(content:nil, style: @box.style.dup.merge(width: available_width))
-        inline_box = Box.new(content: content, style: {display: :inline})
+        new_parent = Box.new(content: nil, style: @box.style.dup.merge(width: available_width))
+        inline_box = Box.new(content: @box.content, style: {display: :inline})
         new_parent.children = [inline_box].concat @box.children
         children2crawl = [new_parent]
       else
@@ -102,7 +102,7 @@ module TerminalLayout
             available_width = ending_x_for_current_y - @current_x
           end
 
-          render_object = render_object_for(cbox, content:cbox.content, style: {width: (cbox.width || available_width)})
+          render_object = render_object_for(cbox, content:nil, style: {width: (cbox.width || available_width)})
           render_object.layout
           render_object.x = @current_x
           render_object.y = @current_y
@@ -145,13 +145,15 @@ module TerminalLayout
         end
       end
 
-      if children.length >= 2
-        last_child = children.max{ |child| child.y }
-        self.height = last_child.y + last_child.height
-      elsif children.length == 1
-        self.height = self.children.first.height
-      else
-        self.height = @box.height || 0
+      if !height
+        if children.length >= 2
+          last_child = children.max{ |child| child.y }
+          self.height = last_child.y + last_child.height
+        elsif children.length == 1
+          self.height = self.children.first.height
+        else
+          self.height = @box.height || 0
+        end
       end
 
       self.children

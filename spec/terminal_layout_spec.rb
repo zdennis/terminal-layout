@@ -10,11 +10,11 @@ def print_tree(render_tree, indent=0)
 end
 
 def find_first_in_tree(tree, comparator_proc)
-  return nil if tree.children.empty?
   tree.children.each do |node|
     return node if comparator_proc.call(node)
     find_first_in_tree node, comparator_proc
   end
+  nil
 end
 
 def find_all_in_tree(tree, comparator_proc)
@@ -33,7 +33,7 @@ end
 module TerminalLayout
 
   describe "Laying things out" do
-    subject(:render_tree){ RenderTree.new(view).tap{ |rt| rt.layout } }
+    subject(:render_tree){ RenderTree.new(view, style:style).tap{ |rt| rt.layout } }
     let(:view){ Box.new(style: style, children: children) }
     let(:style){ raise(NotImplementedError, "Must provide :children") }
     let(:children){ raise(NotImplementedError, "Must provide :children") }
@@ -76,6 +76,28 @@ module TerminalLayout
         it "sets the height" do
           expect(rendered_element.position).to eq(Position.new(0, 0))
           expect(rendered_element.size).to eq(Dimension.new(10, 1))
+        end
+      end
+
+      context "block with height set" do
+        let(:style){ {width:10, height: 10} }
+        let(:children){ [block_a] }
+        let(:block_a){ Box.new(style: {display: :block, height:4}, children:[
+            Box.new(content: "Foobar", style: {display: :inline})
+        ])}
+        let(:rendered_element){ first_rendered(block_a) }
+
+        it "doesn't shrink the height when the content needs less" do
+          expect(block_a.height).to eq 4
+        end
+
+        it "doesn't grow the height when the content needs more" do
+          block_a.content = "Foobar" * 100
+          expect(block_a.height).to eq 4
+        end
+
+        it "doesn't affect the height of the render tree" do
+          expect(render_tree.height).to eq 10
         end
       end
 
