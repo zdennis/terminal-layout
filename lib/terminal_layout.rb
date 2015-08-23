@@ -28,7 +28,7 @@ module TerminalLayout
         next unless child.float == :right
         next unless child.y && child.y <= @current_y && (child.y + child.height - 1) >= @current_y
 
-        [child.x, @box.width].min
+        [child.x, width].min
       end.compact.min || self.width || @box.width
     end
 
