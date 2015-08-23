@@ -92,7 +92,6 @@ module TerminalLayout
 
       @current_x = 0
       @current_y = 0
-
       if @box.display == :block && @box.content.to_s.length > 0
         ending_x = ending_x_for_current_y
         available_width = ending_x - @current_x
@@ -183,13 +182,14 @@ module TerminalLayout
 
     def layout_float(fbox)
       # only allow the float to be as wide as its parent
-      if fbox.width > @box.width
-        fbox.width = @box.width
+      # - first check is the box itself, was it assigned a width?
+      if @box.width && fbox.width > width
+        fbox.width = width
       end
 
       if fbox.float == :left
         # if we cannot fit on this line, go to the next
-        if @current_x + fbox.width > @box.width
+        if @current_x + fbox.width > width
           @current_x = 0
           @current_y += 1
         end
