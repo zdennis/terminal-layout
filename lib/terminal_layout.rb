@@ -65,6 +65,28 @@ module TerminalLayout
       "<#{self.class.name} position=(#{x},#{y}) dimensions=#{width}x#{height} content=#{content}/>"
     end
 
+    def render
+      # Rather than worry about a 2-dimensional space we're going to cheat
+      # and convert everything to a single point.
+      result = height.times.map { |n| (" " * width) }.join("\n")
+
+      if content
+        result[0...content.length] = content.dup
+      end
+
+      children.each do |child|
+        rendered_content = child.render
+
+        # Find the single point where this child's content should be placed.
+        #  (child.y * width): make sure we take into account the row we're on
+        #  plus (child.y): make sure take into account the number of newlines
+        x = child.x + (child.y * width) + child.y
+        result[x...(x+rendered_content.length)] = rendered_content
+      end
+
+      result
+    end
+
     def layout
       self.children = []
 
