@@ -114,6 +114,11 @@ module TerminalLayout
 
           self.children << render_object
         elsif cbox.display == :block
+          if children.last.display == :inline
+            @current_x = 0
+            @current_y += 1
+          end
+
           @current_x = starting_x_for_current_y
           available_width = ending_x_for_current_y - @current_x
 

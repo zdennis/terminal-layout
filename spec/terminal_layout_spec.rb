@@ -121,6 +121,26 @@ module TerminalLayout
         end
       end
 
+      context "block content following inline content" do
+        let(:style){ {width:10, height: 10} }
+        let(:children){ [inline_a, block_b] }
+        let(:inline_a){ Box.new(content: "ABCDE", style: {display: :inline}) }
+        let(:block_b){  Box.new(style: {display: :block, height: 1, width: 5}) }
+
+        let(:rendered_element_a){ first_rendered(inline_a) }
+        let(:rendered_element_b){ first_rendered(block_b) }
+
+        it "puts the block on the next line even though they would both fit on a single line" do
+          expect(render_tree.children.length).to eq(2)
+
+          expect(rendered_element_a.position).to eq(Position.new(0, 0))
+          expect(rendered_element_a.size).to eq(Dimension.new(5, 1))
+
+          expect(rendered_element_b.position).to eq(Position.new(0, 1))
+          expect(rendered_element_b.size).to eq(Dimension.new(5, 1))
+        end
+      end
+
       context "with a block child that has 0 height" do
         let(:style){ {width:10, height: 10} }
         let(:children){ [block_0_height] }
