@@ -3,15 +3,31 @@ module TerminalLayout
   Position = Struct.new(:x, :y)
 
   class RenderObject
-    attr_accessor :box, :style, :children, :content
 
-    def initialize(box, content:nil, style:{x:nil, y:nil})
+    attr_accessor :box, :style, :children, :content, :parent
+
+    def initialize(box, parent:, content:nil, style:{x:nil, y:nil})
       @box = box
       @content = content
       @children = []
+      @parent = parent
       @style = style
       style[:x] || style[:x] = 0
       style[:y] || style[:y] = 0
+
+    end
+
+    def offset
+      offset_x = self.x
+      offset_y = self.y
+      _parent = @parent
+      loop do
+        break unless _parent
+        offset_x += _parent.x
+        offset_y += _parent.y
+        _parent = _parent.parent
+      end
+      Position.new(offset_x, offset_y)
     end
 
     def starting_x_for_current_y
@@ -114,7 +130,7 @@ module TerminalLayout
 
           self.children << render_object
         elsif cbox.display == :block
-          if children.last.display == :inline
+          if children.last.display == :inline && @current_x != 0
             @current_x = 0
             @current_y += 1
           end
@@ -202,7 +218,7 @@ module TerminalLayout
         fbox.x = @current_x
         fbox.y = @current_y
 
-        render_object = render_object_for(fbox, style: {height: fbox.height})
+        render_object = render_object_for(fbox, content: fbox.content, style: {height: fbox.height})
         render_object.layout
 
         @current_x += fbox.width
@@ -227,7 +243,7 @@ module TerminalLayout
         fbox.x = @current_x
         fbox.y = @current_y
 
-        render_object = render_object_for(fbox, style: {height: fbox.height})
+        render_object = render_object_for(fbox, content: fbox.content, style: {height: fbox.height})
         render_object.layout
 
         # reset X back to what it should be
@@ -239,11 +255,11 @@ module TerminalLayout
     def render_object_for(cbox, content:nil, style:{})
       case cbox.display
       when :block
-        BlockRenderObject.new(cbox, content: content, style: {width:@box.width}.merge(style))
+        BlockRenderObject.new(cbox, parent: self, content: content, style: {width:@box.width}.merge(style))
       when :inline
-        InlineRenderObject.new(cbox, content: content, style: style)
+        InlineRenderObject.new(cbox, parent: self, content: content, style: style)
       when :float
-        FloatRenderObject.new(cbox, content: content, style: {x: @current_x, y: @current_y, float: cbox.float}.merge(style))
+        FloatRenderObject.new(cbox, parent: self, content: content, style: {x: @current_x, y: @current_y, float: cbox.float}.merge(style))
       end
     end
   end

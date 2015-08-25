@@ -33,7 +33,7 @@ end
 module TerminalLayout
 
   describe "Laying things out" do
-    subject(:render_tree){ RenderTree.new(view, style:style).tap{ |rt| rt.layout } }
+    subject(:render_tree){ RenderTree.new(view, parent:nil, style:style).tap{ |rt| rt.layout } }
     let(:view){ Box.new(style: style, children: children) }
     let(:style){ raise(NotImplementedError, "Must provide :children") }
     let(:children){ raise(NotImplementedError, "Must provide :children") }
@@ -712,7 +712,33 @@ module TerminalLayout
           expect(rendered_element_e.size).to eq(Dimension.new(1, 5))
         end
       end
+    end
 
+    describe "offsets" do
+      let(:style){ {width:10, height: 10} }
+      let(:children){ [float_a, float_b, block_c, inline_d, inline_e, block_f] }
+      let(:float_a){ Box.new(content: "AAA", style: {width: 3, height: 1, display: :float, float: :left}) }
+      let(:float_b){ Box.new(content: "BBB", style: {width: 3, height: 1, display: :float, float: :right}) }
+      let(:block_c){ Box.new(content: "CCCCCCCCCCCC", style: {width: 6, height: 2, display: :block}) }
+      let(:inline_d){ Box.new(content: "ABCD", style: {display: :inline}) }
+      let(:inline_e){ Box.new(content: "DEFG", style: {display: :inline}) }
+      let(:block_f){ Box.new(content: "JJJJJJJJJJJJJJJJJJ", style: {width: 6, height: 3, display: :block}) }
+
+      let(:rendered_element_a){ first_rendered(float_a) }
+      let(:rendered_element_b){ first_rendered(float_b) }
+      let(:rendered_element_c){ first_rendered(block_c) }
+      let(:rendered_element_d){ first_rendered(inline_d) }
+      let(:rendered_element_e){ first_rendered(inline_e) }
+      let(:rendered_element_f){ first_rendered(block_f) }
+
+      it "knows its offset" do
+        expect(rendered_element_a.offset).to eq(Position.new(0, 0))
+        expect(rendered_element_b.offset).to eq(Position.new(7, 0))
+        expect(rendered_element_c.offset).to eq(Position.new(0, 1))
+        expect(rendered_element_d.offset).to eq(Position.new(0, 3))
+        expect(rendered_element_e.offset).to eq(Position.new(4, 3))
+        expect(rendered_element_f.offset).to eq(Position.new(0, 4))
+      end
     end
 
   end
