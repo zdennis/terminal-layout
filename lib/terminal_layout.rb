@@ -2,19 +2,44 @@ module TerminalLayout
   Dimension = Struct.new(:width, :height)
   Position = Struct.new(:x, :y)
 
+  module EventEmitter
+    def _callbacks
+      @_callbacks ||= Hash.new { |h, k| h[k] = [] }
+    end
+
+    def on(type, *args, &blk)
+      _callbacks[type] << blk
+      self
+    end
+
+    def emit(type, *args)
+      _callbacks[type].each do |blk|
+        blk.call(*args)
+      end
+    end
+  end
+
   class RenderObject
+    include EventEmitter
 
     attr_accessor :box, :style, :children, :content, :parent
 
-    def initialize(box, parent:, content:nil, style:{x:nil, y:nil})
+    def initialize(box, parent:, content:nil, style:{x:nil, y:nil}, renderer:nil)
       @box = box
       @content = content
       @children = []
       @parent = parent
+      @renderer = renderer
       @style = style
       style[:x] || style[:x] = 0
       style[:y] || style[:y] = 0
 
+      @box.on(:content_changed) do
+        @content = @box.content
+        layout
+        @renderer.render self
+        emit :rendered
+      end
     end
 
     def offset
@@ -255,11 +280,11 @@ module TerminalLayout
     def render_object_for(cbox, content:nil, style:{})
       case cbox.display
       when :block
-        BlockRenderObject.new(cbox, parent: self, content: content, style: {width:@box.width}.merge(style))
+        BlockRenderObject.new(cbox, parent: self, content: content, style: {width:@box.width}.merge(style), renderer:@renderer)
       when :inline
-        InlineRenderObject.new(cbox, parent: self, content: content, style: style)
+        InlineRenderObject.new(cbox, parent: self, content: content, style: style, renderer:@renderer)
       when :float
-        FloatRenderObject.new(cbox, parent: self, content: content, style: {x: @current_x, y: @current_y, float: cbox.float}.merge(style))
+        FloatRenderObject.new(cbox, parent: self, content: content, style: {x: @current_x, y: @current_y, float: cbox.float}.merge(style), renderer:@renderer)
       end
     end
   end
@@ -282,6 +307,8 @@ module TerminalLayout
   end
 
   class Box
+    include EventEmitter
+
     attr_accessor :style, :children, :content
 
     def initialize(style:{}, children:[], content:"")
@@ -295,6 +322,11 @@ module TerminalLayout
     %w(width height display x y float).each do |method|
       define_method(method){ style[method.to_sym] }
       define_method("#{method}="){ |value| style[method.to_sym] = value }
+    end
+
+    def content=(str)
+      @content = str
+      emit :content_changed, self
     end
 
     def position
@@ -330,5 +362,52 @@ module TerminalLayout
     def initialize_defaults
       style.has_key?(:display) || style[:display] = :block
     end
+  end
+
+
+  require 'terminfo'
+  class TerminalRenderer
+    include EventEmitter
+
+    attr_reader :term_info
+
+    def initialize
+      @term_info = TermInfo.new ENV["TERM"], $stdout
+      # clear_screen
+      @x, @y = 0, 0
+    end
+
+    def log(str)
+      $z.puts str
+    end
+
+    def render(render_object)
+      @rendered_content = render_object.render
+      printable_content = @rendered_content.sub(/\s*\Z/m, '')
+      if @lines_printed
+        move_up_n_rows @lines_printed
+        move_to_beginning_of_row
+        # clear_screen_down
+        offset = render_object.offset
+        move_to_column offset.x
+        print printable_content
+        move_down_n_rows @lines_printed
+      else
+        @lines_printed = printable_content.lines.length
+        puts printable_content
+      end
+    end
+
+    def clear_to_beginning_of_line ; term_info.control "el1" ; end
+    def clear_screen ; term_info.control "clear" ; end
+    def clear_screen_down ; term_info.control "ed" ; end
+    def move_to_beginning_of_row ; move_to_column 0 ; end
+    def move_left ; move_left_n_characters 1 ; end
+    def move_left_n_characters(n) ; term_info.control "cub1" ; end
+    def move_right_n_characters(n) ; term_info.control "cuf1" ; end
+    def move_to_column_and_row(column, row) ; term_info.control "cup", column, row ; end
+    def move_to_column(n) ; term_info.control "hpa", n ; end
+    def move_up_n_rows(n) ; n.times { term_info.control "cuu1" } ; end
+    def move_down_n_rows(n) ; n.times { term_info.control "cud1" } ; end
   end
 end
