@@ -366,6 +366,7 @@ module TerminalLayout
 
 
   require 'terminfo'
+  require 'termios'
   class TerminalRenderer
     include EventEmitter
 
@@ -382,20 +383,28 @@ module TerminalLayout
     end
 
     def render(render_object)
-      @rendered_content = render_object.render
-      printable_content = @rendered_content.sub(/\s*\Z/m, '')
-      if @lines_printed
-        move_up_n_rows @lines_printed
-        move_to_beginning_of_row
-        # clear_screen_down
-        offset = render_object.offset
-        move_to_column offset.x
-        print printable_content
-        move_down_n_rows @lines_printed
+      print @term_info.control_string "civis"
+
+      offset = render_object.offset
+
+      rows_to_move = @y - offset.y
+      log "ROWS TO MOVE UP: #{rows_to_move}  Y is #{@y}   OFFSET IS #{offset.y}"
+      if rows_to_move > 0
+        move_up_n_rows rows_to_move
       else
-        @lines_printed = printable_content.lines.length
-        puts printable_content
+        move_down_n_rows rows_to_move.abs
       end
+      move_to_column offset.x
+
+      rendered_content = render_object.render
+      printable_content = rendered_content.sub(/\s*\Z/m, '')
+      print printable_content
+
+      printable_lines = printable_content.lines
+      @y = render_object.offset.y + printable_lines.length - 1
+      log "Y is now #{@y}"
+    ensure
+      # print @term_info.control_string "cnorm"
     end
 
     def clear_to_beginning_of_line ; term_info.control "el1" ; end
