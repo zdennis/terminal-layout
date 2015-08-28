@@ -4,11 +4,16 @@ require 'json'
 post_number = 1
 
 require 'pry'
-require File.dirname(__FILE__) + "/lib/terminal_layout"
+$LOAD_PATH << "lib"
+require "terminal_layout"
+require 'term/ansicolor'
 
-left_status = "[YOUR STATUS LEFT]"
+Color = Term::ANSIColor
+
+
+left_status = Color.yellow("[YOUR STATUS LEFT]")
 prompt = "This is my very special prompt> "
-right_status = "EVERYTHING LOOKS GOOD MY FRIEND!"
+right_status = Color.blue("EVERYTHING LOOKS GOOD MY FRIEND!")
 
 left_status_box = TerminalLayout::Box.new(content: left_status, style: {display: :inline})
 right_status_box = TerminalLayout::Box.new(content: right_status, style: {display: :inline})
@@ -20,10 +25,7 @@ hard_status_box = TerminalLayout::Box.new(content: "^^^^^^^^^^^^^^^^^^^^^^^ HARD
 
 
 dom = TerminalLayout::Box.new(children:[
-  TerminalLayout::Box.new(style: {display: :float, float: :left, width: left_status.length},
-    children: [
-      left_status_box
-    ]),
+  left_status_box,
   TerminalLayout::Box.new(style: {display: :float, float: :right, width: right_status.length},
     children: [
       right_status_box
@@ -51,8 +53,10 @@ render_tree.layout
 terminal_renderer.render(render_tree)
 
 sleep 0.75
-left_status_box.content = "[UPDATED LEFT STATUS]"
+left_status_box.content = Color.red("[UPDATED LEFT STATUS]")
 sleep 0.5
+
+dirs = (Dir[ENV["HOME"] + "/*"] * 100).to_enum
 
 b = "a"
 c = 12345
@@ -67,9 +71,15 @@ loop do
   bottom_right_status_box.content = (c+=1).to_s
   sleep 0.25
 
+  left_status_box.content = "[" + dirs.next + "]"
+  sleep 0.25
+
   sample_post = JSON.parse Net::HTTP.get(URI("http://jsonplaceholder.typicode.com/posts/#{post_number+=1}"))
   title = sample_post["title"]
   length = 178
   num_spaces = (length - title.length) / 2
-  hard_status_box.content = "#{' ' * num_spaces}#{sample_post['title']}#{' ' * num_spaces}"
+  str = "#{' ' * num_spaces}#{Color.green(sample_post['title'])}#{' ' * num_spaces}"
+  $c = true
+  hard_status_box.content = "#{' ' * num_spaces}#{Color.green(sample_post['title'])}#{' ' * num_spaces}"
 end
+puts "DIED?"

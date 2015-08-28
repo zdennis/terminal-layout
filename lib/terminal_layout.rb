@@ -1,3 +1,5 @@
+require 'ansi_string'
+
 module TerminalLayout
   Dimension = Struct.new(:width, :height)
   Position = Struct.new(:x, :y)
@@ -10,6 +12,10 @@ module TerminalLayout
     def on(type, *args, &blk)
       _callbacks[type] << blk
       self
+    end
+
+    def unsubscribe
+      _callbacks.clear
     end
 
     def emit(type, *args)
@@ -26,7 +32,7 @@ module TerminalLayout
 
     def initialize(box, parent:, content:nil, style:{x:nil, y:nil}, renderer:nil)
       @box = box
-      @content = content
+      @content = ANSIString.new(content)
       @children = []
       @parent = parent
       @renderer = renderer
@@ -34,11 +40,12 @@ module TerminalLayout
       style[:x] || style[:x] = 0
       style[:y] || style[:y] = 0
 
-      @box.on(:content_changed) do
+      @box.unsubscribe
+      @box.on(:content_changed) do |old_content, new_content|
         @content = @box.content
-        layout
-        @renderer.render self
-        emit :rendered
+        @parent.layout
+        @renderer.render @parent
+        # emit :foo
       end
     end
 
@@ -57,7 +64,7 @@ module TerminalLayout
 
     def starting_x_for_current_y
       children.map do |child|
-        next unless child.float == :left
+        next unless child.float == :left || child.display == :inline
         next unless child.y && child.y <= @current_y && (child.y + child.height - 1) >= @current_y
 
         [child.x + child.width, x].max
@@ -112,7 +119,7 @@ module TerminalLayout
       result = height.times.map { |n| (" " * width) }.join("\n")
 
       if content
-        result[0...content.length] = content.dup
+        result[0...content.length] = content.dup.to_s
       end
 
       children.each do |child|
@@ -133,7 +140,7 @@ module TerminalLayout
 
       @current_x = 0
       @current_y = 0
-      if @box.display == :block && @box.content.to_s.length > 0
+      if @box.display == :block && @box.content.length > 0
         ending_x = ending_x_for_current_y
         available_width = ending_x - @current_x
         new_parent = Box.new(content: nil, style: @box.style.dup.merge(width: available_width))
@@ -314,7 +321,7 @@ module TerminalLayout
     def initialize(style:{}, children:[], content:"")
       @style = style
       @children = children
-      @content = content
+      @content = ANSIString.new(content)
 
       initialize_defaults
     end
@@ -325,8 +332,9 @@ module TerminalLayout
     end
 
     def content=(str)
-      @content = str
-      emit :content_changed, self
+      old = @content
+      @content = ANSIString.new(str)
+      emit :content_changed, old, @content
     end
 
     def position
