@@ -117,6 +117,7 @@ module TerminalLayout
       # Rather than worry about a 2-dimensional space we're going to cheat
       # and convert everything to a single point.
       result = height.times.map { |n| (" " * width) }.join("\n")
+      result = ANSIString.new(result)
 
       if content
         result[0...content.length] = content.dup.to_s
