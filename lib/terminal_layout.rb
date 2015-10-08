@@ -207,7 +207,7 @@ module TerminalLayout
 
             content_i += chars_needed
 
-            if @current_x + chars_needed >= available_width
+            if chars_needed >= available_width
               @current_y += 1
               @current_x = starting_x_for_current_y
               available_width = ending_x_for_current_y - @current_x
