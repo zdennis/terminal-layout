@@ -391,26 +391,61 @@ module TerminalLayout
       $z.puts str
     end
 
+    def dumb_render(node)
+      print @term_info.control_string "civis"
+
+      loop do
+        break unless node.parent
+        node = node.parent
+      end
+
+      rendered_content = node.render
+      printable_content = rendered_content.sub(/\s*\Z/m, '')
+
+      clear_screen_down
+      puts printable_content
+
+      move_up_n_rows printable_content.lines.length
+      move_to_beginning_of_row
+
+
+      @y = printable_content.lines.length
+      log "Y: #{@y}"
+      log printable_content.inspect
+      log ""
+      # printable_lines = printable_content.lines
+      # @y = render_object.offset.y + printable_lines.length - 1
+      # @y += render_object.offset.y + printable_lines.length
+      # log "Y is now #{@y}"
+    end
+
     def render(render_object)
+      return dumb_render(render_object)
+
       print @term_info.control_string "civis"
 
       offset = render_object.offset
 
+      # rows_to_move = [@y - offset.y, 0].max
       rows_to_move = @y - offset.y
       log "ROWS TO MOVE UP: #{rows_to_move}  Y is #{@y}   OFFSET IS #{offset.y}"
       if rows_to_move > 0
         move_up_n_rows rows_to_move
+        # @y -= rows_to_move
       else
         move_down_n_rows rows_to_move.abs
+        # @y += rows_to_move
       end
       move_to_column offset.x
 
       rendered_content = render_object.render
+
       printable_content = rendered_content.sub(/\s*\Z/m, '')
       print printable_content
 
       printable_lines = printable_content.lines
       @y = render_object.offset.y + printable_lines.length - 1
+      # @y += render_object.offset.y + printable_lines.length
       log "Y is now #{@y}"
     ensure
       # print @term_info.control_string "cnorm"
