@@ -37,6 +37,32 @@ describe 'ANSIString' do
         ansi_string = ANSIString.new "abc#{green('def')}ghi"
         expect(ansi_string[0..-1]).to eq "abc#{green('def')}ghi"
       end
+
+      it "returns the string with the ANSI sequences within it intact" do
+        ansi_string = ANSIString.new "abc#{green('def')}ghi"
+        expect(ansi_string[0..2]).to eq "abc"
+      end
+
+    end
+  end
+
+  describe "#[]=" do
+    subject(:ansi_string){ ANSIString.new blue(string) }
+    let(:string){ "this is blue" }
+
+    it "preserves coloring when part of the text with a String" do
+      ansi_string[0..3] = "that"
+      expect(ansi_string).to eq ANSIString.new(blue("that is blue"))
+    end
+
+    it "preserves coloring when replacing all of the text with a String" do
+      ansi_string[0..11] = "foobar"
+      expect(ansi_string).to eq ANSIString.new(blue("foobar"))
+    end
+
+    it "preserves coloring when part of the text with a String and we're not starting at an index of 0" do
+      ansi_string[5..6] = "ain't"
+      expect(ansi_string).to eq ANSIString.new(blue("this ain't blue"))
     end
   end
 
@@ -49,6 +75,30 @@ describe 'ANSIString' do
       expect(duped).to be_kind_of(ANSIString)
       expect(duped.raw).to eq(ansi_string.raw)
     end
+  end
+
+  describe "#lines" do
+    subject(:ansi_string){ ANSIString.new blue(string) }
+    let(:string){ "this\nis\nblue" }
+
+    it "returns lines" do
+      expect(ansi_string.lines).to eq [
+        ANSIString.new(blue("this")),
+        ANSIString.new(blue("is")),
+        ANSIString.new(blue("blue"))
+      ]
+    end
+
+    it "returns lines" do
+      ansi_string = ANSIString.new blue("abc") + "\n" + red("d\nef") + "hi\n" + yellow("foo")
+      expect(ansi_string.lines).to eq [
+        ANSIString.new(blue("abc")),
+        ANSIString.new(red("d")),
+        ANSIString.new(red("ef") + "hi"),
+        ANSIString.new(yellow("foo"))
+      ]
+    end
+
   end
 
   describe "#==" do
@@ -82,6 +132,13 @@ describe 'ANSIString' do
 
     it "returns an ANSIString" do
       expect(ansi_string.sub(/ is /, "")).to eq ANSIString.new(blue("thisblue"))
+    end
+
+    it "." do
+      blue_string = blue("this is blue")
+      yellow_string = yellow("this is yellow")
+      str = ANSIString.new(blue_string + yellow_string + "  \n   \n   \n    ")
+      expect(str.sub(/\s*\Z/m, "")).to eq ANSIString.new(blue_string + yellow_string)
     end
   end
 
