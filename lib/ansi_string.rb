@@ -82,7 +82,7 @@ class ANSIString
       break if (count += 1) == max_count
     end
     if index != @without_ansi.length
-      str << build_string_with_ansi_for(index...@without_ansi.length)
+      str << build_string_with_ansi_for(index..@without_ansi.length)
     end
     nstr = str.gsub /(\033\[[0-9;]*m)(.+?)\033\[0m\1/, '\1\2'
     ANSIString.new(nstr)
@@ -171,22 +171,25 @@ class ANSIString
 
   def build_string_with_ansi_for(range)
     str = ""
+    range_begin = range.begin
+    range_end = range.exclude_end? ? range.end - 1 : range.end
     @ansi_sequence_locations.each do |location|
       # If the given range encompasses part of the location, then we want to
       # include the whole location
-      if location[:begins_at] >= range.begin && location[:ends_at] <= range.end
+      if location[:begins_at] >= range_begin && location[:ends_at] <= range_end
         str << [location[:start_ansi_sequence], location[:text], location[:end_ansi_sequence]].join
 
-      elsif location[:begins_at] >= range.begin && location[:ends_at] <= range.end
-        str << [location[:start_ansi_sequence], location[:text][0..(range.end - location[:begins_at])], location[:end_ansi_sequence]].join
+      elsif location[:begins_at] >= range_begin && location[:begins_at] <= range_end
+        str << [location[:start_ansi_sequence], location[:text][range_begin..(range_end - location[:begins_at])], location[:end_ansi_sequence]].join
 
       # If the location falls within the given range then  make sure we pull
       # out the bits that we want, and keep ANSI escape sequenece intact while
       # doing so.
-      elsif (location[:begins_at] <= range.begin && location[:ends_at] >= range.end) || range.cover?(location[:ends_at])
+      elsif (location[:begins_at] <= range_begin && location[:ends_at] >= range_end) || range.cover?(location[:ends_at])
         start_index = range.begin - location[:begins_at]
-        end_index = range.end - location[:begins_at]
+        end_index = range_end - location[:begins_at]
         str << [location[:start_ansi_sequence], location[:text][start_index...end_index], location[:end_ansi_sequence]].join
+
       end
     end
     str

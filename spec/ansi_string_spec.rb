@@ -25,7 +25,7 @@ describe 'ANSIString' do
 
     it "returns a partial substring with the appropriate ANSI start sequence and provides an end sequence" do
       expect(ansi_string[0..1]).to eq blue("th")
-      expect(ansi_string[17..-5]).to eq yellow("is is ye")
+      expect(ansi_string[17..-5]).to eq yellow("is is y")
     end
 
     it "returns text that is not ANSI escaped" do
@@ -134,12 +134,14 @@ describe 'ANSIString' do
       expect(ansi_string.sub(/ is /, "")).to eq ANSIString.new(blue("thisblue"))
     end
 
-    it "." do
+    it "works across ansi sequences" do
       blue_string = blue("this is blue")
       yellow_string = yellow("this is yellow")
-      str = ANSIString.new(blue_string + yellow_string + "  \n   \n   \n    ")
-      expect(str.sub(/\s*\Z/m, "")).to eq ANSIString.new(blue_string + yellow_string)
+      non_colored_string = "hi there\nbye there"
+      str = ANSIString.new(blue_string + yellow_string + non_colored_string + "  \n   \n   \n    ")
+      expect(str.sub(/\s*\Z/m, "")).to eq ANSIString.new(blue_string + yellow_string + non_colored_string)
     end
+
   end
 
   describe "#to_s" do
