@@ -4,6 +4,17 @@ require 'term/ansicolor'
 describe 'ANSIString' do
   include Term::ANSIColor
 
+  describe "#+ combining strings" do
+    let(:blue_ansi_string){ ANSIString.new blue_string }
+    let(:yellow_ansi_string){ ANSIString.new yellow_string }
+    let(:blue_string){ blue("this is blue") }
+    let(:yellow_string){ yellow("this is yellow") }
+
+    it "returns a new ansi string" do
+      expect(blue_ansi_string + yellow_ansi_string).to eq ANSIString.new(blue_string + yellow_string)
+    end
+  end
+
   describe "#length" do
     subject(:ansi_string){ ANSIString.new blue(string) }
     let(:string){ "this is blue" }

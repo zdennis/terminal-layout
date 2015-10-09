@@ -11,6 +11,10 @@ class ANSIString
     build_ansi_sequence_locations
   end
 
+  def +(other)
+    self.class.new(@raw + other.raw)
+  end
+
   def [](range)
     text = @without_ansi[range]
     str = build_string_with_ansi_for(range.begin...(range.begin + text.length))
