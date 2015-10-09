@@ -2,22 +2,23 @@ class ANSIString
   attr_reader :raw
 
   def initialize(str)
-    if str.is_a?(ANSIString)
-      @raw = str.raw
-    else
-      @raw = str || ""
-    end
-
+    @raw = raw_string_for(str)
     build_ansi_sequence_locations
   end
 
   def +(other)
-    self.class.new(@raw + other.raw)
+    self.class.new @raw + raw_string_for(other)
   end
 
   def [](range)
-    text = @without_ansi[range]
-    str = build_string_with_ansi_for(range.begin...(range.begin + text.length))
+    range_begin = range.begin
+    range_end = range.exclude_end? ? range.end - 1 : range.end
+
+    range_begin = @without_ansi.length - range.begin.abs if range.begin < 0
+    range_end = @without_ansi.length - range.end.abs if range.end < 0
+
+    str = build_string_with_ansi_for(range_begin..range_end)
+
     ANSIString.new str
   end
 
@@ -102,6 +103,10 @@ class ANSIString
   end
 
   private
+
+  def raw_string_for(str)
+    str.is_a?(ANSIString) ? str.raw : str.to_s
+  end
 
   def build_ansi_sequence_locations
     @without_ansi = ""
@@ -192,8 +197,7 @@ class ANSIString
       elsif (location[:begins_at] <= range_begin && location[:ends_at] >= range_end) || range.cover?(location[:ends_at])
         start_index = range.begin - location[:begins_at]
         end_index = range_end - location[:begins_at]
-        str << [location[:start_ansi_sequence], location[:text][start_index...end_index], location[:end_ansi_sequence]].join
-
+        str << [location[:start_ansi_sequence], location[:text][start_index..end_index], location[:end_ansi_sequence]].join
       end
     end
     str

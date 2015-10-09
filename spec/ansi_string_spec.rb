@@ -10,9 +10,14 @@ describe 'ANSIString' do
     let(:blue_string){ blue("this is blue") }
     let(:yellow_string){ yellow("this is yellow") }
 
-    it "returns a new ansi string" do
+    it "returns a new string when combining two ANSIStrings" do
       expect(blue_ansi_string + yellow_ansi_string).to eq ANSIString.new(blue_string + yellow_string)
     end
+
+    it "returns a new string when combining a ANIString with a String" do
+      expect(blue_ansi_string + yellow_string).to eq ANSIString.new(blue_string + yellow_string)
+    end
+
   end
 
   describe "#length" do
@@ -36,11 +41,15 @@ describe 'ANSIString' do
 
     it "returns a partial substring with the appropriate ANSI start sequence and provides an end sequence" do
       expect(ansi_string[0..1]).to eq blue("th")
-      expect(ansi_string[17..-5]).to eq yellow("is is y")
+      expect(ansi_string[17..-5]).to eq yellow("is is ye")
     end
 
     it "returns text that is not ANSI escaped" do
       expect(ansi_string[12..14]).to eq "ABC"
+    end
+
+    it "returns up to the end" do
+      expect(ansi_string[-2..-1]).to eq yellow("ow")
     end
 
     context "and the range is around the ANSI sequence location in the string" do
