@@ -200,8 +200,7 @@ module TerminalLayout
           content = ""
 
           loop do
-            chars_needed = available_width
-            partial_content = cbox.content[content_i...(content_i + chars_needed)]
+            partial_content = cbox.content[content_i...(content_i + available_width)]
             chars_needed = partial_content.length
             self.children << render_object_for(cbox, content:partial_content, style: {display: :inline, x:@current_x, y: @current_y, width:chars_needed, height:1})
 
@@ -211,6 +210,8 @@ module TerminalLayout
               @current_y += 1
               @current_x = starting_x_for_current_y
               available_width = ending_x_for_current_y - @current_x
+            elsif chars_needed == 0
+              break
             else
               @current_x += chars_needed
             end
