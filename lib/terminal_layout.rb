@@ -263,7 +263,7 @@ module TerminalLayout
           available_width = ending_x_for_current_y - starting_x
 
           # if we cannot fit on this line, go to the next
-          width_needed = starting_x + fbox.width
+          width_needed = fbox.width
           if width_needed > available_width
             @current_x = 0
             @current_y += 1
