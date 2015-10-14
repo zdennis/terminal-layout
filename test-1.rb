@@ -11,7 +11,7 @@ require 'term/ansicolor'
 Color = Term::ANSIColor
 
 
-left_status = Color.yellow("[YOUR STATUS LEFT]")
+left_status = Color.yellow("[/Users/zdennis/20150923213313_create_nested_question_answer_join_table.rb]")
 prompt = "This is my very special prompt> "
 right_status = Color.blue("EVERYTHING LOOKS GOOD MY FRIEND!")
 
@@ -58,13 +58,14 @@ sleep 0.5
 
 dirs = (Dir[ENV["HOME"] + "/*"] * 100).to_enum
 
+# dirs = (["/Users/zdennis/20150923213313_create_nested_question_answer_join_table.rb"]*100).to_enum
+
 b = "a"
 c = 12345
 # sleep 2
 loop do
-  right_status_box.content = "[#{Time.now}]"
+  right_status_box.content = Color.green("[#{Time.now}]")
   sleep 0.25
-
   bottom_left_status_box.content = b.succ!
   sleep 0.25
 
@@ -74,12 +75,16 @@ loop do
   left_status_box.content = "[" + dirs.next + "]"
   sleep 0.25
 
-  sample_post = JSON.parse Net::HTTP.get(URI("http://jsonplaceholder.typicode.com/posts/#{post_number+=1}"))
-  title = sample_post["title"]
-  length = 178
-  num_spaces = (length - title.length) / 2
-  str = "#{' ' * num_spaces}#{Color.green(sample_post['title'])}#{' ' * num_spaces}"
-  $c = true
-  hard_status_box.content = "#{' ' * num_spaces}#{Color.green(sample_post['title'])}#{' ' * num_spaces}"
+  # sample_post = JSON.parse Net::HTTP.get(URI("http://jsonplaceholder.typicode.com/posts/#{post_number+=1}"))
+  # title = sample_post["title"]
+  # length = 178
+  # num_spaces = (length - title.length) / 2
+  # str = "#{' ' * num_spaces}#{Color.green(sample_post['title'])}#{' ' * num_spaces}"
+  # $c = true
+  # hard_status_box.content = "#{' ' * num_spaces}#{Color.green(sample_post['title'])}#{' ' * num_spaces}"
+  # sleep 199
+
+  # hard_status_box.content + hard_status_box.content
+  hard_status_box.content = hard_status_box.content + ("A"* 30) + " " #hard_status_box.content
 end
 puts "DIED?"
