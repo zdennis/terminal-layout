@@ -1,0 +1,14 @@
+language: ruby
+cache: bundler
+rvm:
+  - 2.2.3
+
+gemfile:
+  - Gemfile
+
+bundler_args: -j2
+
+before_script:
+
+script:
+  - bundle exec rspec spec
