@@ -24,7 +24,7 @@ class ANSIString
 
   def []=(range, replacement_str)
     text = @without_ansi[range]
-    @raw = replace_in_string(range.begin...(range.begin + text.length), replacement_str)
+    @raw = sanitize replace_in_string(range, replacement_str)
     build_ansi_sequence_locations
     self
   end
@@ -141,6 +141,8 @@ class ANSIString
   end
 
   def replace_in_string(range, replacement_str)
+    raise RangeError, "#{range.inspect} out of range" if range.begin > length
+
     str = ""
     index = 0
 
@@ -148,10 +150,12 @@ class ANSIString
       # If the given range encompasses part of the location, then we want to
       # include the whole location
       if location[:begins_at] >= range.begin && location[:ends_at] <= range.end
+        end_index = range.end - location[:begins_at] + 1
+
         str << [
           location[:start_ansi_sequence],
           replacement_str,
-          location[:text][range.end..-1],
+          location[:text][end_index..-1],
           location[:end_ansi_sequence]
         ].join
         index = range.end
@@ -161,21 +165,34 @@ class ANSIString
       # doing so.
       elsif (location[:begins_at] <= range.begin && location[:ends_at] >= range.end) || range.cover?(location[:ends_at])
         start_index = range.begin - location[:begins_at]
-        end_index = range.end - location[:begins_at]
+        end_index = range.end - location[:begins_at] + 1
+
         str << [
           location[:start_ansi_sequence],
-          location[:text][0...(range.begin - location[:begins_at])],
+          location[:text][location[:begins_at]...start_index],
           replacement_str,
-          location[:text][(range.end - location[:begins_at])..-1],
+          location[:text][end_index..-1],
           location[:end_ansi_sequence]
         ].join
         index = range.end
+      elsif range.begin == location[:length]
+        if replacement_str.is_a?(ANSIString)
+          str << [location[:start_ansi_sequence], location[:text], location[:end_ansi_sequence], replacement_str].join
+        else
+          str << [location[:start_ansi_sequence], location[:text], replacement_str, location[:end_ansi_sequence]].join
+        end
       else
         str << [location[:start_ansi_sequence], location[:text], location[:end_ansi_sequence]].join
         index = location[:ends_at]
       end
     end
     str
+  end
+
+  def sanitize(raw_str)
+    raw_str.gsub(/(\033\[[0-9;]*m)(.*?)(\033\[0m)\1/) do |ansi_sequence|
+      [$1, $2].join
+    end
   end
 
   def build_string_with_ansi_for(range)

@@ -84,6 +84,23 @@ describe 'ANSIString' do
       ansi_string[5..6] = "ain't"
       expect(ansi_string).to eq ANSIString.new(blue("this ain't blue"))
     end
+
+    context "appending a string to the very end" do
+      subject(:ansi_string){ ANSIString.new green("CircleCI pass") }
+      let(:string){ ANSIString.new green("ed") }
+
+      it "works" do
+        ansi_string[13..15] = string
+        expect(ansi_string).to eq ANSIString.new(green("CircleCI passed"))
+      end
+    end
+
+    it "raises an error out of index" do
+      expect {
+        ansi_string[14..15] = string
+      }.to raise_error(RangeError, "14..15 out of range")
+    end
+
   end
 
   describe "#dup" do
