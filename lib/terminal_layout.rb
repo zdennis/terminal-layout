@@ -1,4 +1,5 @@
 require 'ansi_string'
+require 'thread'
 
 module TerminalLayout
   Dimension = Struct.new(:width, :height)
@@ -119,7 +120,7 @@ module TerminalLayout
       result = height.times.map { |n| (" " * width) }.join("\n")
       result = ANSIString.new(result)
 
-      if content
+      if content && content.length > 0
         result[0...content.length] = content.dup.to_s
       end
 
@@ -129,7 +130,7 @@ module TerminalLayout
         # Find the single point where this child's content should be placed.
         #  (child.y * width): make sure we take into account the row we're on
         #  plus (child.y): make sure take into account the number of newlines
-        x = child.x + (child.y * width) + child.y
+        x = child.x + (child.y * width)
         result[x...(x+rendered_content.length)] = rendered_content
       end
 
@@ -386,13 +387,41 @@ module TerminalLayout
       @term_info = TermInfo.new ENV["TERM"], $stdout
       # clear_screen
       @x, @y = 0, 0
+
+      @render_queue = []
+      @semaphore = Mutex.new
+      @render_thread = Thread.new do
+        Thread.current[:name] = "render"
+        loop do
+          render_queue_dup = []
+          @semaphore.synchronize do
+            render_queue_dup = @render_queue.dup
+            @render_queue.clear
+          end
+
+          render_queue_dup.each do |render_object|
+            dumb_render(render_object)
+            # smart_render(render_object)
+          end
+
+          sleep 0.01
+        end
+      end
     end
 
     def log(str)
-      $z.puts str
+      $z.puts str if $z
+    end
+
+    def reset(render_object)
+      @y = 0
+      render(render_object)
     end
 
     def dumb_render(node)
+      move_up_n_rows @y
+      move_to_beginning_of_row
+
       print @term_info.control_string "civis"
 
       loop do
@@ -404,38 +433,34 @@ module TerminalLayout
       printable_content = rendered_content.sub(/\s*\Z/m, '')
 
       clear_screen_down
-      puts printable_content
 
-      move_up_n_rows printable_content.lines.length
-      move_to_beginning_of_row
+      printable_content.lines.each do |line|
+        move_to_beginning_of_row
+        puts line
+      end
 
-
-      @y = printable_content.lines.length
-      log "Y: #{@y}"
-      log printable_content.inspect
-      log ""
-      # printable_lines = printable_content.lines
-      # @y = render_object.offset.y + printable_lines.length - 1
-      # @y += render_object.offset.y + printable_lines.length
-      # log "Y is now #{@y}"
+      # calculate lines drawn so we know where we are
+      lines_drawn = printable_content.length / node.width
+      @y = lines_drawn
     end
 
     def render(render_object)
-      return dumb_render(render_object)
+      @semaphore.synchronize do
+        @render_queue.push render_object
+      end
+    end
 
+    def smart_render(render_object)
       print @term_info.control_string "civis"
 
       offset = render_object.offset
 
-      # rows_to_move = [@y - offset.y, 0].max
       rows_to_move = @y - offset.y
       log "ROWS TO MOVE UP: #{rows_to_move}  Y is #{@y}   OFFSET IS #{offset.y}"
       if rows_to_move > 0
         move_up_n_rows rows_to_move
-        # @y -= rows_to_move
       else
         move_down_n_rows rows_to_move.abs
-        # @y += rows_to_move
       end
       move_to_column offset.x
 
@@ -444,10 +469,9 @@ module TerminalLayout
       printable_content = rendered_content.sub(/\s*\Z/m, '')
       print printable_content
 
-      printable_lines = printable_content.lines
-      @y = render_object.offset.y + printable_lines.length - 1
-      # @y += render_object.offset.y + printable_lines.length
-      log "Y is now #{@y}"
+      # calculate lines drawn so we know where we are
+      lines_drawn = printable_content.length / node.width
+      @y = lines_drawn
     ensure
       # print @term_info.control_string "cnorm"
     end
