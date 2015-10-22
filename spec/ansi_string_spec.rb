@@ -95,12 +95,20 @@ describe 'ANSIString' do
       end
     end
 
+    context "replacing on newline boundaries" do
+      subject(:ansi_string){ ANSIString.new "this\nthat" }
+
+      it "keeps the new line intact" do
+        ansi_string[2...4] = "IS"
+        expect(ansi_string).to eq ANSIString.new("thIS\nthat")
+      end
+    end
+
     it "raises an error out of index" do
       expect {
         ansi_string[14..15] = string
       }.to raise_error(RangeError, "14..15 out of range")
     end
-
   end
 
   describe "#dup" do
@@ -120,8 +128,8 @@ describe 'ANSIString' do
 
     it "returns lines" do
       expect(ansi_string.lines).to eq [
-        ANSIString.new(blue("this")),
-        ANSIString.new(blue("is")),
+        ANSIString.new(blue("this\n")),
+        ANSIString.new(blue("is\n")),
         ANSIString.new(blue("blue"))
       ]
     end
@@ -129,9 +137,9 @@ describe 'ANSIString' do
     it "returns lines" do
       ansi_string = ANSIString.new blue("abc") + "\n" + red("d\nef") + "hi\n" + yellow("foo")
       expect(ansi_string.lines).to eq [
-        ANSIString.new(blue("abc")),
-        ANSIString.new(red("d")),
-        ANSIString.new(red("ef") + "hi"),
+        ANSIString.new(blue("abc") + "\n"),
+        ANSIString.new(red("d\n")),
+        ANSIString.new(red("ef") + "hi\n"),
         ANSIString.new(yellow("foo"))
       ]
     end

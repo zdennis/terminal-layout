@@ -38,12 +38,14 @@ class ANSIString
     current_string = ""
     @ansi_sequence_locations.map do |location|
       if location[:text] == "\n"
-        result << ANSIString.new(current_string)
+        result << ANSIString.new(current_string + "\n")
         current_string = ""
         next
       end
 
-      location[:text].split("\n").each_with_index do |line, i|
+      location[:text].scan(/.*(?:\n|$)/).each_with_index do |line, i|
+        break if line == ""
+
         if i == 0
           current_string << [
             location[:start_ansi_sequence],
@@ -146,7 +148,12 @@ class ANSIString
     str = ""
     index = 0
 
+    if range.exclude_end?
+      range = range.begin..(range.end - 1)
+    end
+
     @ansi_sequence_locations.each do |location|
+
       # If the given range encompasses part of the location, then we want to
       # include the whole location
       if location[:begins_at] >= range.begin && location[:ends_at] <= range.end
@@ -198,22 +205,26 @@ class ANSIString
   def build_string_with_ansi_for(range)
     str = ""
     range_begin = range.begin
-    range_end = range.exclude_end? ? range.end - 1 : range.end
+
+    if range.exclude_end?
+      range = range.begin..(range.end - 1)
+    end
+
     @ansi_sequence_locations.each do |location|
       # If the given range encompasses part of the location, then we want to
       # include the whole location
-      if location[:begins_at] >= range_begin && location[:ends_at] <= range_end
+      if location[:begins_at] >= range_begin && location[:ends_at] <= range.end
         str << [location[:start_ansi_sequence], location[:text], location[:end_ansi_sequence]].join
 
-      elsif location[:begins_at] >= range_begin && location[:begins_at] <= range_end
-        str << [location[:start_ansi_sequence], location[:text][range_begin..(range_end - location[:begins_at])], location[:end_ansi_sequence]].join
+      elsif location[:begins_at] >= range_begin && location[:begins_at] <= range.end
+        str << [location[:start_ansi_sequence], location[:text][range_begin..(range.end - location[:begins_at])], location[:end_ansi_sequence]].join
 
       # If the location falls within the given range then  make sure we pull
       # out the bits that we want, and keep ANSI escape sequenece intact while
       # doing so.
-      elsif (location[:begins_at] <= range_begin && location[:ends_at] >= range_end) || range.cover?(location[:ends_at])
+    elsif (location[:begins_at] <= range_begin && location[:ends_at] >= range.end) || range.cover?(location[:ends_at])
         start_index = range.begin - location[:begins_at]
-        end_index = range_end - location[:begins_at]
+        end_index = range.end - location[:begins_at]
         str << [location[:start_ansi_sequence], location[:text][start_index..end_index], location[:end_ansi_sequence]].join
       end
     end
