@@ -153,7 +153,6 @@ class ANSIString
     end
 
     @ansi_sequence_locations.each do |location|
-
       # If the given range encompasses part of the location, then we want to
       # include the whole location
       if location[:begins_at] >= range.begin && location[:ends_at] <= range.end
@@ -182,7 +181,7 @@ class ANSIString
           location[:end_ansi_sequence]
         ].join
         index = range.end
-      elsif range.begin == location[:length]
+      elsif range.begin == length
         if replacement_str.is_a?(ANSIString)
           str << [location[:start_ansi_sequence], location[:text], location[:end_ansi_sequence], replacement_str].join
         else

@@ -122,6 +122,16 @@ describe 'ANSIString' do
       end
     end
 
+    context "replacing the same location twice" do
+      subject(:ansi_string){ ANSIString.new "this\nthat" }
+
+      it "keeps the new line intact" do
+        ansi_string[2...4] = blue("IS")
+        ansi_string[2...4] = blue("IS")
+        expect(ansi_string).to eq ANSIString.new("th#{blue('IS')}\nthat")
+      end
+    end
+
     it "raises an error out of index" do
       expect {
         ansi_string[14..15] = string
