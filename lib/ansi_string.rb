@@ -2,7 +2,7 @@ class ANSIString
   attr_reader :raw
 
   def initialize(str)
-    @raw = raw_string_for(str)
+    @raw = sanitize raw_string_for(str)
     build_ansi_sequence_locations
   end
 
@@ -197,8 +197,15 @@ class ANSIString
   end
 
   def sanitize(raw_str)
-    raw_str.gsub(/(\033\[[0-9;]*m)(.*?)(\033\[0m)\1/) do |ansi_sequence|
-      [$1, $2].join
+    result = raw_str
+    loop do
+      # remove repetetive neighbor sequences
+      result = result.gsub(/(\033\[[0-9;]*m)(.*?)(\033\[0m)\1/, '\1\2')
+      matched = !!Regexp.last_match
+      # remove redundant immediate neighbors
+      result = result.gsub(/(\033\[[0-9;]*m)(\1+)/, '\1')
+      matched |= !!Regexp.last_match
+      break result unless matched
     end
   end
 

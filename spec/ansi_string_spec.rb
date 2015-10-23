@@ -4,6 +4,24 @@ require 'term/ansicolor'
 describe 'ANSIString' do
   include Term::ANSIColor
 
+  describe "redundant ANSI sequences" do
+    it "removes repetitive nearby neighbor sequences" do
+      ansi_string = ANSIString.new("\e[31m\e[31mHI\e[0m\e[0m")
+      expect(ansi_string.raw).to eq("\e[31mHI\e[0m")
+
+      ansi_string = ANSIString.new("\e[31m\e[31m\e[31mHI\e[0m\e[0m")
+      expect(ansi_string.raw).to eq("\e[31mHI\e[0m")
+
+      ansi_string = ANSIString.new("\e[31m\e[32m\e[32mHI\e[0m\e[0m")
+      expect(ansi_string.raw).to eq("\e[31m\e[32mHI\e[0m")
+    end
+
+    it "removes repetitive adjacent sequences" do
+      ansi_string = ANSIString.new(blue("HI") + blue("BY") + blue("E"))
+      expect(ansi_string.raw).to eq(blue("HIBYE"))
+    end
+  end
+
   describe "#+ combining strings" do
     let(:blue_ansi_string){ ANSIString.new blue_string }
     let(:yellow_ansi_string){ ANSIString.new yellow_string }
@@ -186,7 +204,10 @@ describe 'ANSIString' do
       str = ANSIString.new(blue_string + yellow_string + non_colored_string + "  \n   \n   \n    ")
       expect(str.sub(/\s*\Z/m, "")).to eq ANSIString.new(blue_string + yellow_string + non_colored_string)
     end
+  end
 
+  describe "#gsub" do
+    it "needs to be implemented"
   end
 
   describe "#to_s" do
@@ -196,5 +217,9 @@ describe 'ANSIString' do
     it "returns the ANSI capable string" do
       expect(ansi_string.to_s).to eq blue(string)
     end
+  end
+
+  describe "#succ" do
+    it "needs to be implemented"
   end
 end
