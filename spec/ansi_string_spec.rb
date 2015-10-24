@@ -4,21 +4,32 @@ require 'term/ansicolor'
 describe 'ANSIString' do
   include Term::ANSIColor
 
-  describe "redundant ANSI sequences" do
-    it "removes repetitive nearby neighbor sequences" do
-      ansi_string = ANSIString.new("\e[31m\e[31mHI\e[0m\e[0m")
-      expect(ansi_string.raw).to eq("\e[31mHI\e[0m")
-
-      ansi_string = ANSIString.new("\e[31m\e[31m\e[31mHI\e[0m\e[0m")
-      expect(ansi_string.raw).to eq("\e[31mHI\e[0m")
-
-      ansi_string = ANSIString.new("\e[31m\e[32m\e[32mHI\e[0m\e[0m")
-      expect(ansi_string.raw).to eq("\e[31m\e[32mHI\e[0m")
+  describe "constructing" do
+    it "can be constructed with a String" do
+      ansi_string = ANSIString.new "this is a string"
+      expect(ansi_string).to be
     end
 
-    it "removes repetitive adjacent sequences" do
-      ansi_string = ANSIString.new(blue("HI") + blue("BY") + blue("E"))
-      expect(ansi_string.raw).to eq(blue("HIBYE"))
+    it "can be constructed with a String containing ANSI escape sequences" do
+      ansi_string = ANSIString.new "this #{blue('is')} a string"
+      expect(ansi_string).to be
+    end
+  end
+
+  describe "redundant ANSI sequences" do
+    it "strips out redundant ANSI sequences that are immediately next to each other" do
+      ansi_string = ANSIString.new "this is\e[31m\e[31m a string"
+      expect(ansi_string.to_s).to eq "this is\e[31m a string"
+    end
+
+    it "strips out redundant ANSI sequences that are not immediately next to each other" do
+      ansi_string = ANSIString.new "this \e[31m a\e[31m string"
+      expect(ansi_string.to_s).to eq "this \e[31m a string"
+    end
+
+    it "does not strip out ANSI sequences that differ" do
+      ansi_string = ANSIString.new "this \e[31m a\e[32m string"
+      expect(ansi_string.to_s).to eq "this \e[31m a\e[32m string"
     end
   end
 
@@ -35,7 +46,6 @@ describe 'ANSIString' do
     it "returns a new string when combining a ANIString with a String" do
       expect(blue_ansi_string + yellow_string).to eq ANSIString.new(blue_string + yellow_string)
     end
-
   end
 
   describe "#length" do
@@ -53,8 +63,8 @@ describe 'ANSIString' do
     let(:yellow_string){ yellow("this is yellow") }
 
     it "returns the full substring with the appropriate ANSI start and end sequence" do
-      expect(ansi_string[0...12]).to eq blue("this is blue")
-      expect(ansi_string[15..-1]).to eq yellow("this is yellow")
+      expect(ansi_string[0...12]).to eq ANSIString.new(blue("this is blue"))
+      expect(ansi_string[15..-1]).to eq ANSIString.new(yellow("this is yellow"))
     end
 
     it "returns a partial substring with the appropriate ANSI start sequence and provides an end sequence" do
@@ -80,7 +90,6 @@ describe 'ANSIString' do
         ansi_string = ANSIString.new "abc#{green('def')}ghi"
         expect(ansi_string[0..2]).to eq "abc"
       end
-
     end
   end
 
@@ -105,11 +114,15 @@ describe 'ANSIString' do
 
     context "appending a string to the very end" do
       subject(:ansi_string){ ANSIString.new green("CircleCI pass") }
-      let(:string){ ANSIString.new green("ed") }
 
-      it "works" do
-        ansi_string[13..15] = string
+      it "combines when the ANSI sequences are the same" do
+        ansi_string[13..15] = ANSIString.new green("ed")
         expect(ansi_string).to eq ANSIString.new(green("CircleCI passed"))
+      end
+
+      it "doesn't combine when the ANSI sequences are different" do
+        ansi_string[13..15] = ANSIString.new red("ed")
+        expect(ansi_string).to eq ANSIString.new(green("CircleCI pass") + red("ed"))
       end
     end
 
@@ -129,6 +142,15 @@ describe 'ANSIString' do
         ansi_string[2...4] = blue("IS")
         ansi_string[2...4] = blue("IS")
         expect(ansi_string).to eq ANSIString.new("th#{blue('IS')}\nthat")
+      end
+    end
+
+    context "replacing a substring that goes across ANSI sequence boundaries" do
+      subject(:ansi_string){ ANSIString.new "this#{blue('that')}" }
+
+      it "successfully moves the boundaries" do
+        ansi_string[3..4] = yellow("SORRY")
+        expect(ansi_string).to eq ANSIString.new("thi#{yellow('SORRY')}#{blue('hat')}")
       end
     end
 
@@ -171,7 +193,6 @@ describe 'ANSIString' do
         ANSIString.new(yellow("foo"))
       ]
     end
-
   end
 
   describe "#==" do

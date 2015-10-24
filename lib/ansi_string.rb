@@ -2,8 +2,7 @@ class ANSIString
   attr_reader :raw
 
   def initialize(str)
-    @raw = sanitize raw_string_for(str)
-    build_ansi_sequence_locations
+    process_string raw_string_for(str)
   end
 
   def +(other)
@@ -24,8 +23,7 @@ class ANSIString
 
   def []=(range, replacement_str)
     text = @without_ansi[range]
-    @raw = sanitize replace_in_string(range, replacement_str)
-    build_ansi_sequence_locations
+    process_string replace_in_string(range, replacement_str)
     self
   end
 
@@ -110,49 +108,56 @@ class ANSIString
     str.is_a?(ANSIString) ? str.raw : str.to_s
   end
 
-  def build_ansi_sequence_locations
+  def process_string(raw_str)
     @without_ansi = ""
-    @ansi_sequence_locations = @raw.enum_for(:scan, /(\033\[[0-9;]*m)(.*?)(\033\[[0-9;]*m)|(.*?)(?=(\033\[[0-9;]*m|\Z))/m ).map do
+    @ansi_sequence_locations = []
+    raw_str.enum_for(:scan, /(\e\[[0-9;]*m)?(.*?)(?=\e\[[0-9;]*m|\Z)/m ).each do
       md = Regexp.last_match
-      start_ansi_sequence, text, end_ansi_sequence, plaintext = md.captures
+      ansi_sequence, text = md.captures
 
-      {}.tap do |hsh|
-        if plaintext
-          hsh.merge!(
-            begins_at: @without_ansi.length,
-            ends_at: [@without_ansi.length + plaintext.length - 1, 0].max,
-            length: plaintext.length,
-            text: plaintext,
-            start_ansi_sequence: nil,
-            end_ansi_sequence: nil
-          )
-          @without_ansi << plaintext
-        else
-          hsh.merge!(
-            begins_at: @without_ansi.length,
-            ends_at: [@without_ansi.length + text.length - 1, 0].max,
-            length: text.length,
-            text: text,
-            start_ansi_sequence: start_ansi_sequence,
-            end_ansi_sequence: end_ansi_sequence
-          )
+      previous_sequence_location = @ansi_sequence_locations.last
+      if previous_sequence_location
+        if ansi_sequence == "\e[0m"
+          previous_sequence_location[:end_ansi_sequence] = ansi_sequence
+          ansi_sequence = nil
+        elsif previous_sequence_location[:start_ansi_sequence] == ansi_sequence
+          previous_sequence_location[:text] << text
+          previous_sequence_location[:ends_at] += [@without_ansi.length + text.length - 1, 0].max
+          previous_sequence_location[:length] += text.length
           @without_ansi << text
+          next
         end
       end
-    end.compact.select{ |location| location[:text] != "" }
+
+      if ansi_sequence.nil? && text.to_s.length == 0
+        next
+      end
+
+      @ansi_sequence_locations.push(
+        begins_at: @without_ansi.length,
+        ends_at: [@without_ansi.length + text.length - 1, 0].max,
+        length: text.length,
+        text: text,
+        start_ansi_sequence: ansi_sequence
+      )
+
+      @without_ansi << text
+    end
+
+    @raw = @ansi_sequence_locations.map do |location|
+      [location[:start_ansi_sequence], location[:text], location[:end_ansi_sequence]].compact.join
+    end.join
+
+    @ansi_sequence_locations
   end
 
   def replace_in_string(range, replacement_str)
     raise RangeError, "#{range.inspect} out of range" if range.begin > length
 
+    range = range.begin..(range.end - 1) if range.exclude_end?
     str = ""
-    index = 0
 
-    if range.exclude_end?
-      range = range.begin..(range.end - 1)
-    end
-
-    @ansi_sequence_locations.each do |location|
+    @ansi_sequence_locations.each_with_index do |location, j|
       # If the given range encompasses part of the location, then we want to
       # include the whole location
       if location[:begins_at] >= range.begin && location[:ends_at] <= range.end
@@ -164,23 +169,43 @@ class ANSIString
           location[:text][end_index..-1],
           location[:end_ansi_sequence]
         ].join
-        index = range.end
 
       # If the location falls within the given range then  make sure we pull
       # out the bits that we want, and keep ANSI escape sequenece intact while
       # doing so.
-      elsif (location[:begins_at] <= range.begin && location[:ends_at] >= range.end) || range.cover?(location[:ends_at])
+      elsif location[:begins_at] <= range.begin && location[:ends_at] >= range.end
         start_index = range.begin - location[:begins_at]
         end_index = range.end - location[:begins_at] + 1
 
         str << [
           location[:start_ansi_sequence],
-          location[:text][location[:begins_at]...start_index],
+          location[:text][location[:begins_at]...(location[:begins_at]+start_index)],
           replacement_str,
           location[:text][end_index..-1],
           location[:end_ansi_sequence]
         ].join
-        index = range.end
+
+      elsif location[:ends_at] <= range.end
+        start_index = range.begin - location[:begins_at]
+        end_index = range.end
+        num_chars_to_remove_from_next_location = range.end - location[:ends_at]
+
+        str << [
+          location[:start_ansi_sequence],
+          location[:text][location[:begins_at]...(location[:begins_at]+start_index)],
+          location[:end_ansi_sequence],
+          replacement_str.to_s,
+          location[:text][end_index..-1],
+        ].join
+
+        if location=@ansi_sequence_locations[j+1]
+          old = location.dup
+          location[:text][0...num_chars_to_remove_from_next_location] = ""
+          location[:begins_at] += num_chars_to_remove_from_next_location
+          location[:ends_at] += num_chars_to_remove_from_next_location
+          location[:length] -= num_chars_to_remove_from_next_location
+        end
+
       elsif range.begin == length
         if replacement_str.is_a?(ANSIString)
           str << [location[:start_ansi_sequence], location[:text], location[:end_ansi_sequence], replacement_str].join
@@ -189,28 +214,13 @@ class ANSIString
         end
       else
         str << [location[:start_ansi_sequence], location[:text], location[:end_ansi_sequence]].join
-        index = location[:ends_at]
       end
     end
     str
   end
 
-  def sanitize(raw_str)
-    result = raw_str
-    loop do
-      # remove repetetive neighbor sequences
-      result = result.gsub(/(\033\[[0-9;]*m)(.*?)(\033\[0m)\1/, '\1\2')
-      matched = !!Regexp.last_match
-      # remove redundant immediate neighbors
-      result = result.gsub(/(\033\[[0-9;]*m)(\1+)/, '\1')
-      matched |= !!Regexp.last_match
-      break result unless matched
-    end
-  end
-
   def build_string_with_ansi_for(range)
     str = ""
-    range_begin = range.begin
 
     if range.exclude_end?
       range = range.begin..(range.end - 1)
@@ -219,16 +229,16 @@ class ANSIString
     @ansi_sequence_locations.each do |location|
       # If the given range encompasses part of the location, then we want to
       # include the whole location
-      if location[:begins_at] >= range_begin && location[:ends_at] <= range.end
+      if location[:begins_at] >= range.begin && location[:ends_at] <= range.end
         str << [location[:start_ansi_sequence], location[:text], location[:end_ansi_sequence]].join
 
-      elsif location[:begins_at] >= range_begin && location[:begins_at] <= range.end
-        str << [location[:start_ansi_sequence], location[:text][range_begin..(range.end - location[:begins_at])], location[:end_ansi_sequence]].join
+      elsif location[:begins_at] >= range.begin && location[:begins_at] <= range.end
+        str << [location[:start_ansi_sequence], location[:text][range.begin..(range.end - location[:begins_at])], location[:end_ansi_sequence]].join
 
       # If the location falls within the given range then  make sure we pull
       # out the bits that we want, and keep ANSI escape sequenece intact while
       # doing so.
-    elsif (location[:begins_at] <= range_begin && location[:ends_at] >= range.end) || range.cover?(location[:ends_at])
+    elsif (location[:begins_at] <= range.begin && location[:ends_at] >= range.end) || range.cover?(location[:ends_at])
         start_index = range.begin - location[:begins_at]
         end_index = range.end - location[:begins_at]
         str << [location[:start_ansi_sequence], location[:text][start_index..end_index], location[:end_ansi_sequence]].join
