@@ -122,7 +122,7 @@ class ANSIString
           ansi_sequence = nil
         elsif previous_sequence_location[:start_ansi_sequence] == ansi_sequence
           previous_sequence_location[:text] << text
-          previous_sequence_location[:ends_at] += [@without_ansi.length + text.length - 1, 0].max
+          previous_sequence_location[:ends_at] += text.length
           previous_sequence_location[:length] += text.length
           @without_ansi << text
           next
@@ -158,6 +158,7 @@ class ANSIString
     str = ""
 
     @ansi_sequence_locations.each_with_index do |location, j|
+
       # If the given range encompasses part of the location, then we want to
       # include the whole location
       if location[:begins_at] >= range.begin && location[:ends_at] <= range.end
@@ -179,13 +180,13 @@ class ANSIString
 
         str << [
           location[:start_ansi_sequence],
-          location[:text][location[:begins_at]...(location[:begins_at]+start_index)],
+          location[:text][0...start_index],
           replacement_str,
           location[:text][end_index..-1],
           location[:end_ansi_sequence]
         ].join
 
-      elsif location[:ends_at] <= range.end
+      elsif location[:ends_at] == range.begin
         start_index = range.begin - location[:begins_at]
         end_index = range.end
         num_chars_to_remove_from_next_location = range.end - location[:ends_at]
@@ -203,7 +204,6 @@ class ANSIString
           location[:text][0...num_chars_to_remove_from_next_location] = ""
           location[:begins_at] += num_chars_to_remove_from_next_location
           location[:ends_at] += num_chars_to_remove_from_next_location
-          location[:length] -= num_chars_to_remove_from_next_location
         end
 
       elsif range.begin == length

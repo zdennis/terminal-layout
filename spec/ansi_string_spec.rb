@@ -159,6 +159,15 @@ describe 'ANSIString' do
         ansi_string[14..15] = string
       }.to raise_error(RangeError, "14..15 out of range")
     end
+
+    context "replacing a substring that comes entirely after an ANSI sequence" do
+      subject(:ansi_string){ ANSIString.new "this #{blue('is')} your television screen." }
+
+      it "places the substring in the correct location" do
+        ansi_string[14..15] = "YO YO"
+        expect(ansi_string).to eq ANSIString.new "this #{blue('is')} your tYO YOevision screen."
+      end
+    end
   end
 
   describe "#dup" do
