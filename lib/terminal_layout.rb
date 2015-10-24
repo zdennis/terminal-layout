@@ -428,6 +428,7 @@ module TerminalLayout
         break unless node.parent
         node = node.parent
       end
+      node.layout
 
       rendered_content = node.render
       printable_content = rendered_content.sub(/\s*\Z/m, '')
@@ -440,6 +441,7 @@ module TerminalLayout
       end
 
       # calculate lines drawn so we know where we are
+      log "LINES: #{printable_content.length / node.width}\nRENDERING: #{printable_content.inspect}\n"
       lines_drawn = printable_content.length / node.width
       @y = lines_drawn
     end
