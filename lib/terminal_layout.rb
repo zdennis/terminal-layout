@@ -376,6 +376,21 @@ module TerminalLayout
   end
 
 
+  class InputBox < Box
+    attr_accessor :cursor_position
+
+    def initialize(*args)
+      super
+      @cursor_position = 0
+    end
+
+    def content=(str)
+      old = @content
+      @content = ANSIString.new(str)
+      emit :content_changed, old, @content
+    end
+  end
+
   require 'terminfo'
   require 'termios'
   class TerminalRenderer
