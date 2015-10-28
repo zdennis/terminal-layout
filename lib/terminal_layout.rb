@@ -117,7 +117,7 @@ module TerminalLayout
     def render
       # Rather than worry about a 2-dimensional space we're going to cheat
       # and convert everything to a single point.
-      result = height.times.map { |n| (" " * width) }.join("\n")
+      result = height.times.map { |n| (" " * width) }.join
       result = ANSIString.new(result)
 
       if content && content.length > 0
