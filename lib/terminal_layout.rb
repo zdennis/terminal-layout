@@ -164,7 +164,7 @@ module TerminalLayout
 
           self.children << render_object
         elsif cbox.display == :block
-          if children.last.display == :inline && @current_x != 0
+          if children.last && children.last.display == :inline && @current_x != 0
             @current_x = 0
             @current_y += 1
           end
