@@ -45,8 +45,7 @@ module TerminalLayout
       @box.on(:content_changed) do |old_content, new_content|
         @content = @box.content
         @parent.layout
-        @renderer.render @parent
-        # emit :foo
+        @renderer.render node: @parent, source: @box
       end
     end
 
@@ -398,8 +397,9 @@ module TerminalLayout
 
     attr_reader :term_info
 
-    def initialize
-      @term_info = TermInfo.new ENV["TERM"], $stdout
+    def initialize(output: $stdout)
+      @output = output
+      @term_info = TermInfo.new ENV["TERM"], @output
       # clear_screen
       @x, @y = 0, 0
 
@@ -408,15 +408,14 @@ module TerminalLayout
       @render_thread = Thread.new do
         Thread.current[:name] = "render"
         loop do
-          render_queue_dup = []
+          render_queue_event = nil
           @semaphore.synchronize do
-            render_queue_dup = @render_queue.dup
+            render_queue_event = @render_queue.pop
             @render_queue.clear
           end
 
-          render_queue_dup.each do |render_object|
-            dumb_render(render_object)
-            # smart_render(render_object)
+          if render_queue_event
+            dumb_render(**render_queue_event)
           end
 
           sleep 0.01
@@ -424,51 +423,49 @@ module TerminalLayout
       end
     end
 
-    def log(str)
-      $z.puts str if $z
-    end
-
     def reset(render_object)
       @y = 0
-      render(render_object)
+      render(node: render_object, source: nil)
     end
 
-    def dumb_render(node)
+    def dumb_render(node:, source:)
+      @output.print @term_info.control_string "civis"
+
       move_up_n_rows @y
       move_to_beginning_of_row
-
-      print @term_info.control_string "civis"
 
       loop do
         break unless node.parent
         node = node.parent
       end
-      node.layout
+
+      node_width = node.width
+      clear_screen_down
 
       rendered_content = node.render
       printable_content = rendered_content.sub(/\s*\Z/m, '')
-
-      clear_screen_down
-
       printable_content.lines.each do |line|
         move_to_beginning_of_row
-        puts line
+        @output.puts line
       end
+      move_to_beginning_of_row
 
       # calculate lines drawn so we know where we are
-      log "LINES: #{printable_content.length / node.width}\nRENDERING: #{printable_content.inspect}\n"
-      lines_drawn = printable_content.length / node.width
+      lines_drawn = (printable_content.length / node_width.to_f).ceil
       @y = lines_drawn
+
+      # Unfortunately, we're not ready for this yet.
+      # @output.print @term_info.control_string "cnorm"
     end
 
-    def render(render_object)
+    def render(node:, source:)
       @semaphore.synchronize do
-        @render_queue.push render_object
+        @render_queue.push node: node, source: source
       end
     end
 
     def smart_render(render_object)
-      print @term_info.control_string "civis"
+      # @output.print @term_info.control_string "civis"
 
       offset = render_object.offset
 
@@ -484,13 +481,13 @@ module TerminalLayout
       rendered_content = render_object.render
 
       printable_content = rendered_content.sub(/\s*\Z/m, '')
-      print printable_content
+      @output.print printable_content
 
       # calculate lines drawn so we know where we are
       lines_drawn = printable_content.length / node.width
       @y = lines_drawn
     ensure
-      # print @term_info.control_string "cnorm"
+      # @output.print @term_info.control_string "cnorm"
     end
 
     def clear_to_beginning_of_line ; term_info.control "el1" ; end
