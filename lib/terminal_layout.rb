@@ -405,6 +405,7 @@ module TerminalLayout
 
       @render_queue = []
       @semaphore = Mutex.new
+      Thread.abort_on_exception = true
       @render_thread = Thread.new do
         Thread.current[:name] = "render"
         loop do
@@ -418,9 +419,16 @@ module TerminalLayout
             dumb_render(**render_queue_event)
           end
 
-          sleep 0.01
+          Thread.stop
         end
       end
+    end
+
+    def render(node:, source:)
+      @semaphore.synchronize do
+        @render_queue.push node: node, source: source
+      end
+      @render_thread.run
     end
 
     def reset(render_object)
@@ -456,12 +464,6 @@ module TerminalLayout
 
       # Unfortunately, we're not ready for this yet.
       # @output.print @term_info.control_string "cnorm"
-    end
-
-    def render(node:, source:)
-      @semaphore.synchronize do
-        @render_queue.push node: node, source: source
-      end
     end
 
     def smart_render(render_object)
