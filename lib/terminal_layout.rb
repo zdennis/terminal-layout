@@ -1,5 +1,5 @@
+require 'pry'
 require 'ansi_string'
-require 'thread'
 
 module TerminalLayout
   Dimension = Struct.new(:width, :height)
@@ -41,12 +41,19 @@ module TerminalLayout
       style[:x] || style[:x] = 0
       style[:y] || style[:y] = 0
 
-      @box.unsubscribe
-      @box.on(:content_changed) do |old_content, new_content|
-        @content = @box.content
-        @parent.layout
-        @renderer.render node: @parent, source: @box
-      end
+      # @box.unsubscribe
+      # @box.on(:content_changed) do |old_content, new_content|
+      #   @content = @box.content
+      #   # @parent.emit :child_changed, source: self, target: @box
+      #   # @parent.layout
+      #   # @renderer.render node: @parent, source: @box
+      # end
+      #
+      # @box.on(:child_changed) do |event|
+      #   # if @parent
+      #   #   @parent.emit :child_changed, source: self, target: event[:target]
+      #   # end
+      # end
     end
 
     def offset
@@ -138,7 +145,6 @@ module TerminalLayout
 
     def layout
       self.children = []
-
       @current_x = 0
       @current_y = 0
       if @box.display == :block && @box.content.length > 0
@@ -326,6 +332,16 @@ module TerminalLayout
       @content = ANSIString.new(content)
 
       initialize_defaults
+
+       @children.each do |child|
+         child.on(:content_changed) do |*args|
+           emit :child_changed
+         end
+
+         child.on(:child_changed) do |*args|
+           emit :child_changed
+         end
+       end
     end
 
     %w(width height display x y float).each do |method|
@@ -400,58 +416,34 @@ module TerminalLayout
     def initialize(output: $stdout)
       @output = output
       @term_info = TermInfo.new ENV["TERM"], @output
-      # clear_screen
       @x, @y = 0, 0
-
-      @render_queue = []
-      @semaphore = Mutex.new
-      Thread.abort_on_exception = true
-      @render_thread = Thread.new do
-        Thread.current[:name] = "render"
-        loop do
-          render_queue_event = nil
-          @semaphore.synchronize do
-            render_queue_event = @render_queue.pop
-            @render_queue.clear
-          end
-
-          if render_queue_event
-            dumb_render(**render_queue_event)
-          end
-
-          Thread.stop
-        end
-      end
     end
 
-    def render(node:, source:)
-      @semaphore.synchronize do
-        @render_queue.push node: node, source: source
-      end
-      @render_thread.run
+    def render(object)
+      dumb_render(object)
     end
 
-    def reset(render_object)
+    def reset
       @y = 0
-      render(node: render_object, source: nil)
     end
 
-    def dumb_render(node:, source:)
+    def dumb_render(object)
       @output.print @term_info.control_string "civis"
 
       move_up_n_rows @y
       move_to_beginning_of_row
 
       loop do
-        break unless node.parent
-        node = node.parent
+        break unless object.parent
+        object = object.parent
       end
 
-      node_width = node.width
+      object_width = object.width
       clear_screen_down
 
-      rendered_content = node.render
+      rendered_content = object.render
       printable_content = rendered_content.sub(/\s*\Z/m, '')
+
       printable_content.lines.each do |line|
         move_to_beginning_of_row
         @output.puts line
@@ -459,36 +451,10 @@ module TerminalLayout
       move_to_beginning_of_row
 
       # calculate lines drawn so we know where we are
-      lines_drawn = (printable_content.length / node_width.to_f).ceil
+      lines_drawn = (printable_content.length / object_width.to_f).ceil
       @y = lines_drawn
 
       # Unfortunately, we're not ready for this yet.
-      # @output.print @term_info.control_string "cnorm"
-    end
-
-    def smart_render(render_object)
-      # @output.print @term_info.control_string "civis"
-
-      offset = render_object.offset
-
-      rows_to_move = @y - offset.y
-      log "ROWS TO MOVE UP: #{rows_to_move}  Y is #{@y}   OFFSET IS #{offset.y}"
-      if rows_to_move > 0
-        move_up_n_rows rows_to_move
-      else
-        move_down_n_rows rows_to_move.abs
-      end
-      move_to_column offset.x
-
-      rendered_content = render_object.render
-
-      printable_content = rendered_content.sub(/\s*\Z/m, '')
-      @output.print printable_content
-
-      # calculate lines drawn so we know where we are
-      lines_drawn = printable_content.length / node.width
-      @y = lines_drawn
-    ensure
       # @output.print @term_info.control_string "cnorm"
     end
 
