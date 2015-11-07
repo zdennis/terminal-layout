@@ -1,5 +1,6 @@
 require 'pry'
 require 'ansi_string'
+require 'ostruct'
 
 module TerminalLayout
   Dimension = Struct.new(:width, :height)
@@ -41,19 +42,7 @@ module TerminalLayout
       style[:x] || style[:x] = 0
       style[:y] || style[:y] = 0
 
-      # @box.unsubscribe
-      # @box.on(:content_changed) do |old_content, new_content|
-      #   @content = @box.content
-      #   # @parent.emit :child_changed, source: self, target: @box
-      #   # @parent.layout
-      #   # @renderer.render node: @parent, source: @box
-      # end
-      #
-      # @box.on(:child_changed) do |event|
-      #   # if @parent
-      #   #   @parent.emit :child_changed, source: self, target: event[:target]
-      #   # end
-      # end
+      @box.update_computed(style)
     end
 
     def offset
@@ -89,7 +78,11 @@ module TerminalLayout
 
     %w(width height display x y float).each do |method|
       define_method(method){ style[method.to_sym] }
-      define_method("#{method}="){ |value| style[method.to_sym] = value }
+
+      define_method("#{method}=") do |value|
+        style[method.to_sym] = value
+        @box.computed[method] = value
+      end
     end
 
     def position
@@ -324,12 +317,13 @@ module TerminalLayout
   class Box
     include EventEmitter
 
-    attr_accessor :style, :children, :content
+    attr_accessor :style, :children, :content, :computed
 
     def initialize(style:{}, children:[], content:"")
       @style = style
       @children = children
       @content = ANSIString.new(content)
+      @computed = {}
 
       initialize_defaults
 
@@ -383,6 +377,10 @@ module TerminalLayout
       "<Box##{object_id} position=(#{x},#{y})  dimensions=#{width}x#{height} display=#{display.inspect} content=#{content}/>"
     end
 
+    def update_computed(style)
+      @computed.merge!(style)
+    end
+
     private
 
     def initialize_defaults
@@ -396,13 +394,19 @@ module TerminalLayout
 
     def initialize(*args)
       super
-      @cursor_position = 0
+      @cursor_position = OpenStruct.new(x: 0, y: 0)
     end
 
     def content=(str)
       old = @content
       @content = ANSIString.new(str)
       emit :content_changed, old, @content
+    end
+
+    def update_computed(style)
+      @computed.merge!(style)
+      @cursor_position.x = style[:x] + style[:width]
+      @cursor_position.y = style[:y]
     end
   end
 
@@ -429,7 +433,6 @@ module TerminalLayout
 
     def dumb_render(object)
       @output.print @term_info.control_string "civis"
-
       move_up_n_rows @y
       move_to_beginning_of_row
 
@@ -454,8 +457,23 @@ module TerminalLayout
       lines_drawn = (printable_content.length / object_width.to_f).ceil
       @y = lines_drawn
 
-      # Unfortunately, we're not ready for this yet.
-      # @output.print @term_info.control_string "cnorm"
+      move_up_n_rows @y
+      move_to_beginning_of_row
+
+      input_box = find_input_box(object.box)
+      cursor_position = input_box.cursor_position
+
+      move_right_n_characters cursor_position.x
+      move_down_n_rows cursor_position.y
+
+      @y = input_box.cursor_position.y
+      @output.print @term_info.control_string "cnorm"
+    end
+
+    def find_input_box(dom_node)
+      dom_node.children.detect do |child|
+        child.is_a?(InputBox) || find_input_box(child)
+      end
     end
 
     def clear_to_beginning_of_line ; term_info.control "el1" ; end
@@ -463,8 +481,8 @@ module TerminalLayout
     def clear_screen_down ; term_info.control "ed" ; end
     def move_to_beginning_of_row ; move_to_column 0 ; end
     def move_left ; move_left_n_characters 1 ; end
-    def move_left_n_characters(n) ; term_info.control "cub1" ; end
-    def move_right_n_characters(n) ; term_info.control "cuf1" ; end
+    def move_left_n_characters(n) ; n.times { term_info.control "cub1" } ; end
+    def move_right_n_characters(n) ; n.times { term_info.control "cuf1" } ; end
     def move_to_column_and_row(column, row) ; term_info.control "cup", column, row ; end
     def move_to_column(n) ; term_info.control "hpa", n ; end
     def move_up_n_rows(n) ; n.times { term_info.control "cuu1" } ; end
