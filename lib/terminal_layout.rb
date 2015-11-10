@@ -335,6 +335,10 @@ module TerminalLayout
          child.on(:child_changed) do |*args|
            emit :child_changed
          end
+
+         child.on(:cursor_position_changed) do |*args|
+           emit :cursor_position_changed
+         end
        end
     end
 
@@ -394,6 +398,7 @@ module TerminalLayout
 
     def initialize(*args)
       super
+      @cursor_offset_x = 0
       @cursor_position = OpenStruct.new(x: 0, y: 0)
     end
 
@@ -403,16 +408,24 @@ module TerminalLayout
       emit :content_changed, old, @content
     end
 
+    def position=(position)
+      @cursor_offset_x = position
+      @cursor_position.x = @cursor_offset_x + @computed[:x]
+      emit :cursor_position_changed, nil, @cursor_position.x
+    end
+
     def update_computed(style)
       @computed.merge!(style)
-      @cursor_position.x = style[:x] + style[:width]
+      @cursor_position.x = style[:x] + @cursor_offset_x
       @cursor_position.y = style[:y]
     end
   end
 
   require 'terminfo'
   require 'termios'
+  require 'highline/system_extensions'
   class TerminalRenderer
+    include HighLine::SystemExtensions
     include EventEmitter
 
     attr_reader :term_info
@@ -421,6 +434,27 @@ module TerminalLayout
       @output = output
       @term_info = TermInfo.new ENV["TERM"], @output
       @x, @y = 0, 0
+    end
+
+    def render_cursor(input_box)
+      move_up_n_rows @y
+      move_to_beginning_of_row
+
+      cursor_position = input_box.cursor_position
+      cursor_x = cursor_position.x
+      cursor_y = cursor_position.y
+
+      # TODO: make this work when lines wrap
+      if cursor_x < 0
+        cursor_x = terminal_width
+        cursor_y -= 1
+      elsif cursor_x >= terminal_width
+      end
+
+      move_right_n_characters cursor_position.x
+      move_down_n_rows cursor_position.y
+
+      @y = input_box.cursor_position.y
     end
 
     def render(object)
@@ -457,16 +491,10 @@ module TerminalLayout
       lines_drawn = (printable_content.length / object_width.to_f).ceil
       @y = lines_drawn
 
-      move_up_n_rows @y
-      move_to_beginning_of_row
-
       input_box = find_input_box(object.box)
-      cursor_position = input_box.cursor_position
 
-      move_right_n_characters cursor_position.x
-      move_down_n_rows cursor_position.y
+      render_cursor(input_box)
 
-      @y = input_box.cursor_position.y
       @output.print @term_info.control_string "cnorm"
     end
 
@@ -487,5 +515,13 @@ module TerminalLayout
     def move_to_column(n) ; term_info.control "hpa", n ; end
     def move_up_n_rows(n) ; n.times { term_info.control "cuu1" } ; end
     def move_down_n_rows(n) ; n.times { term_info.control "cud1" } ; end
+
+    def terminal_width
+      terminal_size[0]
+    end
+
+    def terminal_height
+      terminal_size[1]
+    end
   end
 end

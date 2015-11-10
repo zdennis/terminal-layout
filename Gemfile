@@ -1,7 +1,6 @@
 source "https://rubygems.org"
 
-gem "ruby-terminfo"
-gem "ruby-termios"
+gemspec
 
 group :development do
   gem 'pry-byebug'
