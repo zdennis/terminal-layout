@@ -33,6 +33,16 @@ class ANSIString
     self
   end
 
+  # See String#index for arguments
+  def index(*args)
+    @without_ansi.index(*args)
+  end
+
+  # See String#rindex for arguments
+  def rindex(*args)
+    @without_ansi.rindex(*args)
+  end
+
   def length
     @without_ansi.length
   end

@@ -71,6 +71,87 @@ describe 'ANSIString' do
     end
   end
 
+  describe "#index" do
+    it "returns the index of the first occurrence of the given substring" do
+      ansi_string = ANSIString.new("this is not blue")
+      expect(ansi_string.index("b")).to eq 12
+
+      ansi_string = ANSIString.new("this is #{blue('blue')}")
+      expect(ansi_string.index("blu")).to eq 8
+
+      ansi_string = ANSIString.new("this is #{blue('blue')} and this is #{yellow('yellow')}")
+      expect(ansi_string.index("yellow")).to eq 25
+    end
+
+    it "returns the index starting on or after an optional start position" do
+      ansi_string = ANSIString.new("this is not blue")
+      expect(ansi_string.index("t", 0)).to eq 0
+
+      ansi_string = ANSIString.new("this is #{blue('blue')}")
+      expect(ansi_string.index("is", 3)).to eq 5
+      expect(ansi_string.index("bl", 7)).to eq 8
+      expect(ansi_string.index("bl", 9)).to eq nil
+
+      ansi_string = ANSIString.new("this is #{blue('blue')} and this is #{yellow('yellow')}")
+      expect(ansi_string.index("yel", 5)).to eq 25
+      expect(ansi_string.index("yel", 25)).to eq 25
+      expect(ansi_string.index("yel", 26)).to eq nil
+    end
+
+    it "returns the index of the first occurrence of the given regular expression" do
+      ansi_string = ANSIString.new("this is not blue")
+      expect(ansi_string.index(/b/)).to eq 12
+
+      ansi_string = ANSIString.new("this is #{blue('blue')}")
+      expect(ansi_string.index(/blu/)).to eq 8
+
+      ansi_string = ANSIString.new("this is #{blue('blue')} and this is #{yellow('yellow')}")
+      expect(ansi_string.index(/y.ll.w/)).to eq 25
+    end
+  end
+
+  describe "#rindex" do
+    it "returns the index of the last occurrence of the given substring" do
+      ansi_string = ANSIString.new("this is not blue")
+      expect(ansi_string.rindex("i")).to eq 5
+
+      ansi_string = ANSIString.new("this is #{blue('blue')}")
+      expect(ansi_string.rindex("blu")).to eq 8
+
+      ansi_string = ANSIString.new("this is #{blue('blue')} and this is #{yellow('yellow')}")
+      expect(ansi_string.rindex("yellow")).to eq 25
+    end
+
+    it "returns the index of the match on or after an optional stop position" do
+      ansi_string = ANSIString.new("this is not blue")
+      expect(ansi_string.rindex("t", 0)).to eq 0
+      expect(ansi_string.rindex("is", 3)).to eq 2
+      expect(ansi_string.rindex("bl", 12)).to eq 12
+
+      ansi_string = ANSIString.new("this is #{blue('blue')}")
+      expect(ansi_string.rindex("is", 0)).to eq nil
+      expect(ansi_string.rindex("is", 3)).to eq 2
+      expect(ansi_string.rindex("bl", 8)).to eq 8
+      expect(ansi_string.rindex("bl", 12)).to eq 8
+
+      ansi_string = ANSIString.new("this is #{blue('blue')} and this is #{yellow('yellow')}")
+      expect(ansi_string.rindex("yel", 5)).to eq nil
+      expect(ansi_string.rindex("yel", 25)).to eq 25
+      expect(ansi_string.rindex("yel", 26)).to eq 25
+    end
+
+    it "returns the index of the last occurrence of the given regular expression" do
+      ansi_string = ANSIString.new("this is not blue")
+      expect(ansi_string.rindex(/b/)).to eq 12
+
+      ansi_string = ANSIString.new("this is #{blue('blue')}")
+      expect(ansi_string.rindex(/blu/)).to eq 8
+
+      ansi_string = ANSIString.new("this is #{blue('blue')} and this is #{yellow('yellow')}")
+      expect(ansi_string.rindex(/y.ll.w/)).to eq 25
+    end
+  end
+
   describe "#[]" do
     subject(:ansi_string){ ANSIString.new "#{blue_string}ABC#{yellow_string}" }
     let(:blue_string){ blue("this is blue") }
