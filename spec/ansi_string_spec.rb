@@ -48,6 +48,20 @@ describe 'ANSIString' do
     end
   end
 
+  describe "#<<" do
+    it "appends a String onto the end of the current ANSIString" do
+      ansi_string =  ANSIString.new "a"
+      ansi_string << "b"
+      expect(ansi_string).to eq ANSIString.new("ab")
+    end
+
+    it "appends an ANSIString onto the end of the current ANSIString" do
+      ansi_string =  ANSIString.new "a"
+      ansi_string << ANSIString.new(blue("b"))
+      expect(ansi_string).to eq ANSIString.new("a#{blue('b')}")
+    end
+  end
+
   describe "#length" do
     subject(:ansi_string){ ANSIString.new blue(string) }
     let(:string){ "this is blue" }

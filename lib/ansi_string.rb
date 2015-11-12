@@ -9,6 +9,12 @@ class ANSIString
     self.class.new @raw + raw_string_for(other)
   end
 
+  def <<(other)
+    range = length..length
+    process_string replace_in_string(range, other)
+    self
+  end
+
   def [](range)
     range_begin = range.begin
     range_end = range.exclude_end? ? range.end - 1 : range.end
