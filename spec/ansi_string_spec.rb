@@ -50,15 +50,27 @@ describe 'ANSIString' do
 
   describe "#<<" do
     it "appends a String onto the end of the current ANSIString" do
-      ansi_string =  ANSIString.new "a"
+      ansi_string = ANSIString.new ""
+      ansi_string << "a"
+      expect(ansi_string).to eq ANSIString.new("a")
+
       ansi_string << "b"
       expect(ansi_string).to eq ANSIString.new("ab")
+
+      ansi_string << "cd"
+      expect(ansi_string).to eq ANSIString.new("abcd")
     end
 
     it "appends an ANSIString onto the end of the current ANSIString" do
-      ansi_string =  ANSIString.new "a"
-      ansi_string << ANSIString.new(blue("b"))
-      expect(ansi_string).to eq ANSIString.new("a#{blue('b')}")
+      ansi_string = ANSIString.new ""
+      ansi_string << ANSIString.new(blue("a"))
+      expect(ansi_string).to eq ANSIString.new("#{blue('a')}")
+
+      ansi_string << ANSIString.new(yellow("b"))
+      expect(ansi_string).to eq ANSIString.new("#{blue('a')}#{yellow('b')}")
+
+      ansi_string << ANSIString.new(red("cd"))
+      expect(ansi_string).to eq ANSIString.new("#{blue('a')}#{yellow('b')}#{red('cd')}")
     end
   end
 

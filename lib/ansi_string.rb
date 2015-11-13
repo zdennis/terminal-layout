@@ -11,7 +11,8 @@ class ANSIString
 
   def <<(other)
     range = length..length
-    process_string replace_in_string(range, other)
+    str = replace_in_string(range, other)
+    process_string raw_string_for(str)
     self
   end
 
@@ -169,12 +170,12 @@ class ANSIString
 
   def replace_in_string(range, replacement_str)
     raise RangeError, "#{range.inspect} out of range" if range.begin > length
+    return replacement_str if @ansi_sequence_locations.empty?
 
     range = range.begin..(range.end - 1) if range.exclude_end?
     str = ""
 
     @ansi_sequence_locations.each_with_index do |location, j|
-
       # If the given range encompasses part of the location, then we want to
       # include the whole location
       if location[:begins_at] >= range.begin && location[:ends_at] <= range.end
@@ -222,7 +223,8 @@ class ANSIString
           location[:ends_at] += num_chars_to_remove_from_next_location
         end
 
-      elsif range.begin == length
+      # If we're pushing onto the end of the string
+      elsif range.begin == length && location[:ends_at] == length - 1
         if replacement_str.is_a?(ANSIString)
           str << [location[:start_ansi_sequence], location[:text], location[:end_ansi_sequence], replacement_str].join
         else
@@ -232,6 +234,7 @@ class ANSIString
         str << [location[:start_ansi_sequence], location[:text], location[:end_ansi_sequence]].join
       end
     end
+
     str
   end
 
