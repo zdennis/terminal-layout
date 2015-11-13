@@ -209,6 +209,16 @@ describe 'ANSIString' do
     subject(:ansi_string){ ANSIString.new blue(string) }
     let(:string){ "this is blue" }
 
+    it "returns a new ANSIString with the string at the given index replaced with the new string" do
+      ansi_string[1] = "Z"
+      expect(ansi_string).to eq ANSIString.new(blue("tZis is blue"))
+    end
+
+    it "returns a new ANSIString with the string at the given range replaced with the new string" do
+      ansi_string[1..2] = "ZYX"
+      expect(ansi_string).to eq ANSIString.new(blue("tZYXs is blue"))
+    end
+
     it "preserves coloring when part of the text with a String" do
       ansi_string[0..3] = "that"
       expect(ansi_string).to eq ANSIString.new(blue("that is blue"))

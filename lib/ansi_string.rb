@@ -33,6 +33,9 @@ class ANSIString
   end
 
   def []=(range, replacement_str)
+    # convert numeric position to a range
+    range = (range..range) if range.is_a?(Integer)
+
     text = @without_ansi[range]
     process_string replace_in_string(range, replacement_str)
     self
