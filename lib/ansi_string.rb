@@ -1,5 +1,5 @@
 class ANSIString
-  attr_reader :raw
+  attr_reader :raw, :without_ansi
 
   def initialize(str)
     process_string raw_string_for(str)
@@ -17,6 +17,9 @@ class ANSIString
   end
 
   def [](range)
+    # convert numeric position to a range
+    range = (range..range) if range.is_a?(Integer)
+
     range_begin = range.begin
     range_end = range.exclude_end? ? range.end - 1 : range.end
 
@@ -24,8 +27,9 @@ class ANSIString
     range_end = @without_ansi.length - range.end.abs if range.end < 0
 
     str = build_string_with_ansi_for(range_begin..range_end)
-
-    ANSIString.new str
+    if str
+      ANSIString.new str
+    end
   end
 
   def []=(range, replacement_str)
@@ -53,6 +57,28 @@ class ANSIString
       [location[:start_ansi_sequence], location[:text].reverse, location[:end_ansi_sequence]].join
     end.join
     ANSIString.new str
+  end
+
+  def slice(index, length=nil)
+    range = nil
+    index = index.without_ansi if index.is_a?(ANSIString)
+    index = Regexp.new Regexp.escape(index) if index.is_a?(String)
+    if index.is_a?(Integer)
+      length = index unless length
+      range = (index...index+length)
+    elsif index.is_a?(Range)
+      range = index
+    elsif index.is_a?(Regexp)
+      md = @without_ansi.match(index)
+      capture_group_index = length || 0
+      if md
+        capture_group = md.offset(capture_group_index)
+        range = (capture_group.first...capture_group.last)
+      end
+    else
+      raise(ArgumentError, "Must pass in at least an index or a range.")
+    end
+    self[range] if range
   end
 
   def split(*args)
@@ -254,6 +280,8 @@ class ANSIString
   end
 
   def build_string_with_ansi_for(range)
+    return nil if range.begin > length
+
     str = ""
 
     if range.exclude_end?

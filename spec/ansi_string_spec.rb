@@ -198,6 +198,11 @@ describe 'ANSIString' do
         expect(ansi_string[0..2]).to eq "abc"
       end
     end
+
+    it "returns nil when the given range is beyond the length of the string" do
+      ansi_string = ANSIString.new "abc"
+      expect(ansi_string[4]).to be nil
+    end
   end
 
   describe "#[]=" do
@@ -359,6 +364,64 @@ describe 'ANSIString' do
     it "reverses the string with ANSI sequences" do
       ansi_string = ANSIString.new("a#{blue('b')}#{yellow('c')}")
       expect(ansi_string.reverse).to eq ANSIString.new("#{yellow('c')}#{blue('b')}a")
+    end
+  end
+
+  describe "#slice" do
+    it "returns a substring of one character given a numeric index" do
+      ansi_string = ANSIString.new("a#{blue('b')}c")
+      expect(ansi_string.slice(0)).to eq ANSIString.new("a")
+      expect(ansi_string.slice(1)).to eq ANSIString.new(blue("b"))
+      expect(ansi_string.slice(2)).to eq ANSIString.new("c")
+    end
+
+    it "returns a substring of characters of N length given a start index and max length N" do
+      ansi_string = ANSIString.new("a#{blue('b')}c")
+      expect(ansi_string.slice(0, 2)).to eq ANSIString.new("a#{blue('b')}")
+      expect(ansi_string.slice(1, 2)).to eq ANSIString.new("#{blue('b')}c")
+
+      # length is over, doesn't blow up
+      expect(ansi_string.slice(1, 3)).to eq ANSIString.new("#{blue('b')}c")
+    end
+
+    it "returns a substring of characters using a range as delimiters" do
+      ansi_string = ANSIString.new("a#{blue('b')}c")
+      expect(ansi_string.slice(0..1)).to eq ANSIString.new("a#{blue('b')}")
+      expect(ansi_string.slice(0...2)).to eq ANSIString.new("a#{blue('b')}")
+
+      # length is over, doesn't blow up
+      expect(ansi_string.slice(1..3)).to eq ANSIString.new("#{blue('b')}c")
+    end
+
+    it "returns a substring of characters matching the given regex" do
+      ansi_string = ANSIString.new("a#{blue('b')}c")
+      expect(ansi_string.slice(/b/)).to eq ANSIString.new("#{blue('b')}")
+      expect(ansi_string.slice(/(b)c/)).to eq ANSIString.new("#{blue('b')}c")
+
+      # length is over, doesn't blow up
+      expect(ansi_string.slice(/.*/)).to eq ANSIString.new("a#{blue('b')}c")
+    end
+
+    it "returns a substring for the capture group matching the given regex and capture group index" do
+      ansi_string = ANSIString.new("a#{blue('b')}c")
+      expect(ansi_string.slice(/((a)(b)(c))/, 1)).to eq ANSIString.new("a#{blue('b')}c")
+      expect(ansi_string.slice(/((a)(b)(c))/, 2)).to eq ANSIString.new("a")
+      expect(ansi_string.slice(/((a)(b)(c))/, 3)).to eq ANSIString.new("#{blue('b')}")
+      expect(ansi_string.slice(/((a)(b)(c))/, 4)).to eq ANSIString.new("c")
+    end
+
+    it "returns the substring when a given string is found" do
+      ansi_string = ANSIString.new("a#{blue('b')}c")
+      expect(ansi_string.slice("bc")).to eq(ANSIString.new("#{blue('b')}c"))
+    end
+
+    it "returns nil when no matches are found" do
+      ansi_string = ANSIString.new("a#{blue('b')}c")
+      expect(ansi_string.slice("zzz")).to be nil
+      expect(ansi_string.slice(/zzz/)).to be nil
+      expect(ansi_string.slice(99)).to be nil
+      expect(ansi_string.slice(99, 100)).to be nil
+      expect(ansi_string.slice(99..100)).to be nil
     end
   end
 
