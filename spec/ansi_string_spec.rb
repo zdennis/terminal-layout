@@ -463,6 +463,14 @@ describe 'ANSIString' do
     end
   end
 
+  describe "#strip" do
+    it 'returns a copy of the string with leading and trailing whitespace removed' do
+      ansi_string = ANSIString.new " this is his #{blue('pig')} "
+      expect(ansi_string.strip).to eq ANSIString.new "this is his #{blue('pig')}"
+      expect(ansi_string).to eq ANSIString.new " this is his #{blue('pig')} "
+    end
+  end
+
   describe "#sub" do
     subject(:ansi_string){ ANSIString.new blue(string) }
     let(:string){ "this is blue" }

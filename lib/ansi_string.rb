@@ -88,6 +88,10 @@ class ANSIString
     raw.split(*args).map { |s| ANSIString.new(s) }
   end
 
+  def strip
+    ANSIString.new raw.strip
+  end
+
   def length
     @without_ansi.length
   end
