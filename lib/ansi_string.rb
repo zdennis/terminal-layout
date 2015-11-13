@@ -39,6 +39,10 @@ class ANSIString
     @without_ansi.index(*args)
   end
 
+  def match(*args, &blk)
+    @without_ansi.match(*args, &blk)
+  end
+
   # See String#rindex for arguments
   def rindex(*args)
     @without_ansi.rindex(*args)

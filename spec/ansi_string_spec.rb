@@ -336,6 +336,20 @@ describe 'ANSIString' do
     end
   end
 
+  describe "#match" do
+    it "matches on a string pattren" do
+      string = "apples are bananas are they not?"
+      ansi_string = ANSIString.new("app#{red('les are bananas')} are they not?")
+      expect(ansi_string.match("are")).to eq(string.match("are"))
+    end
+
+    it "matches on a regex pattren" do
+      string = "apples are bananas are they not?"
+      ansi_string = ANSIString.new("app#{red('les are bananas')} are they not?")
+      expect(ansi_string.match(/are/)).to eq(string.match(/are/))
+    end
+  end
+
   describe "#reverse" do
     it "reverses the string" do
       ansi_string = ANSIString.new("abc")
