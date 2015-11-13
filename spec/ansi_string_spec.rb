@@ -336,6 +336,18 @@ describe 'ANSIString' do
     end
   end
 
+  describe "#reverse" do
+    it "reverses the string" do
+      ansi_string = ANSIString.new("abc")
+      expect(ansi_string.reverse).to eq ANSIString.new("cba")
+    end
+
+    it "reverses the string with ANSI sequences" do
+      ansi_string = ANSIString.new("a#{blue('b')}#{yellow('c')}")
+      expect(ansi_string.reverse).to eq ANSIString.new("#{yellow('c')}#{blue('b')}a")
+    end
+  end
+
   describe "#sub" do
     subject(:ansi_string){ ANSIString.new blue(string) }
     let(:string){ "this is blue" }

@@ -44,6 +44,17 @@ class ANSIString
     @without_ansi.rindex(*args)
   end
 
+  def reverse
+    str = @ansi_sequence_locations.reverse.map do |location|
+      [location[:start_ansi_sequence], location[:text].reverse, location[:end_ansi_sequence]].join
+    end.join
+    ANSIString.new str
+  end
+
+  def split(*args)
+    raw.split(*args).map{ |s| ANSIString.new(s) }
+  end
+
   def length
     @without_ansi.length
   end
