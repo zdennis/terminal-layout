@@ -348,6 +348,34 @@ describe 'ANSIString' do
     end
   end
 
+  describe "#split" do
+    it "splits on the given string pattern" do
+      ansi_string = ANSIString.new("apples are #{red('red')}. bananas are #{blue('blue')}. cats are #{yellow('yellow')}.")
+      expect(ansi_string.split(". ")).to eq([
+        ANSIString.new("apples are #{red('red')}"),
+        ANSIString.new("bananas are #{blue('blue')}"),
+        ANSIString.new("cats are #{yellow('yellow')}.")
+      ])
+    end
+
+    it "splits on the given regex pattern" do
+      ansi_string = ANSIString.new("apples are #{red('red')}. bananas are #{blue('blue')}. cats are #{yellow('yellow')}.")
+      expect(ansi_string.split(/\.\s?/)).to eq([
+        ANSIString.new("apples are #{red('red')}"),
+        ANSIString.new("bananas are #{blue('blue')}"),
+        ANSIString.new("cats are #{yellow('yellow')}")
+      ])
+    end
+
+    it "limits how many times it splits with a secondary limit argument" do
+      ansi_string = ANSIString.new("apples are #{red('red')}. bananas are #{blue('blue')}. cats are #{yellow('yellow')}.")
+      expect(ansi_string.split(/\.\s?/, 2)).to eq([
+        ANSIString.new("apples are #{red('red')}"),
+        ANSIString.new("bananas are #{blue('blue')}. cats are #{yellow('yellow')}.")
+      ])
+    end
+  end
+
   describe "#sub" do
     subject(:ansi_string){ ANSIString.new blue(string) }
     let(:string){ "this is blue" }

@@ -52,7 +52,7 @@ class ANSIString
   end
 
   def split(*args)
-    raw.split(*args).map{ |s| ANSIString.new(s) }
+    raw.split(*args).map { |s| ANSIString.new(s) }
   end
 
   def length
