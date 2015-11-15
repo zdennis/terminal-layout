@@ -55,6 +55,11 @@ class ANSIString
     @without_ansi.rindex(*args)
   end
 
+  def replace(str)
+    process_string raw_string_for(str)
+    self
+  end
+
   def reverse
     str = @ansi_sequence_locations.reverse.map do |location|
       [location[:start_ansi_sequence], location[:text].reverse, location[:end_ansi_sequence]].join

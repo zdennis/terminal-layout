@@ -365,6 +365,15 @@ describe 'ANSIString' do
     end
   end
 
+  describe "#replace" do
+    it "replaces the contents of the current string with the new string" do
+      ansi_string = ANSIString.new("abc")
+      original_object_id = ansi_string.object_id
+      expect(ansi_string.replace("def")).to eq ANSIString.new("def")
+      expect(ansi_string.object_id).to eq(original_object_id)
+    end
+  end
+
   describe "#reverse" do
     it "reverses the string" do
       ansi_string = ANSIString.new("abc")
