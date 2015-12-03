@@ -42,7 +42,8 @@ class ANSIString
     range_begin = @without_ansi.length - range.begin.abs if range.begin < 0
     range_end = @without_ansi.length - range.end.abs if range.end < 0
 
-    process_string replace_in_string(range_begin..range_end, replacement_str)
+    updated_string = replace_in_string(range_begin..range_end, replacement_str)
+    process_string raw_string_for(updated_string)
     self
   end
 
@@ -268,9 +269,9 @@ class ANSIString
         str << [
           location[:start_ansi_sequence],
           location[:text][location[:begins_at]...(location[:begins_at]+start_index)],
-          location[:end_ansi_sequence],
           replacement_str,
           location[:text][end_index..-1],
+          location[:end_ansi_sequence],
         ].join
 
         if location=@ansi_sequence_locations[j+1]

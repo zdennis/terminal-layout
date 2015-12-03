@@ -284,9 +284,42 @@ describe 'ANSIString' do
     context "replacing a substring that goes across ANSI sequence boundaries" do
       subject(:ansi_string){ ANSIString.new "this#{blue('that')}" }
 
-      it "successfully moves the boundaries" do
+      it "moves the boundaries when using positive indexes and a regular String replacement" do
         ansi_string[3..4] = yellow("SORRY")
         expect(ansi_string).to eq ANSIString.new("thi#{yellow('SORRY')}#{blue('hat')}")
+      end
+
+      it "moves the boundaries when using positive indexes and an ANSIString replacement" do
+        ansi_string[3..4] = yellow("SORRY")
+        expect(ansi_string).to eq ANSIString.new("thi#{yellow('SORRY')}#{blue('hat')}")
+      end
+
+      it "moves the boundaries when using negatives indexes and a regular String replacement" do
+        ansi_string[-5..4] = "SORRY"
+        expect(ansi_string).to eq ANSIString.new("thiSORRY#{blue('hat')}")
+      end
+
+      it "moves the boundaries when using negatives indexes and an ANSIString replacement" do
+        ansi_string[-5..4] = yellow("SORRY")
+        expect(ansi_string).to eq ANSIString.new("thi#{yellow('SORRY')}#{blue('hat')}")
+      end
+    end
+
+    context "clearing the string" do
+      subject(:ansi_string){ ANSIString.new "this\nthat" }
+
+      it "clears the string" do
+        ansi_string[0..-1] = ""
+        expect(ansi_string).to eq ANSIString.new("")
+      end
+    end
+
+    context "expanding a string" do
+      subject(:ansi_string){ ANSIString.new "" }
+
+      it "expands the string" do
+        ansi_string[0..-1] = ANSIString.new(blue("HI"))
+        expect(ansi_string).to eq ANSIString.new(blue("HI"))
       end
     end
 
