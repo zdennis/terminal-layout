@@ -219,6 +219,20 @@ describe 'ANSIString' do
       expect(ansi_string).to eq ANSIString.new(blue("tZYXs is blue"))
     end
 
+    it "supports replacing with negative indexes at the front of the string" do
+      ansi_string[0..-1] = "abc"
+      expect(ansi_string).to eq ANSIString.new(blue("abc"))
+    end
+
+    it "supports replacing with negative indexes in the middle of the string" do
+      ansi_string = ANSIString.new(blue("abc"))
+      ansi_string[1..-2] = red("*")
+
+      # Do not preserve reset sequences (e.g. "\e[0m") when inserting/replacing.
+      # So no \e[0m before the replacement '*'
+      expect(ansi_string).to eq ANSIString.new("\e[34ma\e[31m*\e[0mc\e[0m")
+    end
+
     it "preserves coloring when part of the text with a String" do
       ansi_string[0..3] = "that"
       expect(ansi_string).to eq ANSIString.new(blue("that is blue"))

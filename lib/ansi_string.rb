@@ -36,8 +36,13 @@ class ANSIString
     # convert numeric position to a range
     range = (range..range) if range.is_a?(Integer)
 
-    text = @without_ansi[range]
-    process_string replace_in_string(range, replacement_str)
+    range_begin = range.begin
+    range_end = range.exclude_end? ? range.end - 1 : range.end
+
+    range_begin = @without_ansi.length - range.begin.abs if range.begin < 0
+    range_end = @without_ansi.length - range.end.abs if range.end < 0
+
+    process_string replace_in_string(range_begin..range_end, replacement_str)
     self
   end
 
@@ -227,7 +232,6 @@ class ANSIString
 
     range = range.begin..(range.end - 1) if range.exclude_end?
     str = ""
-
     @ansi_sequence_locations.each_with_index do |location, j|
       # If the given range encompasses part of the location, then we want to
       # include the whole location
@@ -265,7 +269,7 @@ class ANSIString
           location[:start_ansi_sequence],
           location[:text][location[:begins_at]...(location[:begins_at]+start_index)],
           location[:end_ansi_sequence],
-          replacement_str.to_s,
+          replacement_str,
           location[:text][end_index..-1],
         ].join
 
