@@ -1,5 +1,10 @@
+require 'forwardable'
+
 class ANSIString
+  extend Forwardable
   attr_reader :raw, :without_ansi
+
+  def_delegator :@without_ansi, :each_char
 
   def initialize(str)
     process_string raw_string_for(str)
