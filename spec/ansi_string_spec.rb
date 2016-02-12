@@ -410,6 +410,17 @@ describe 'ANSIString' do
     end
   end
 
+  describe "<=>" do
+    let(:string_1){ ANSIString.new blue("abc") }
+    let(:string_2){ ANSIString.new blue("def") }
+
+    it "behaves the same as a normal string" do
+      expect(string_1 <=> string_2).to eq(-1)
+      expect(string_1 <=> string_1).to eq(0)
+      expect(string_2 <=> string_1).to eq(1)
+    end
+  end
+
   describe "#match" do
     it "matches on a string pattren" do
       string = "apples are bananas are they not?"

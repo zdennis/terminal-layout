@@ -183,6 +183,10 @@ class ANSIString
     (other.class == self.class && other.raw == @raw) || (other.kind_of?(String) && other == @raw)
   end
 
+  def <=>(other)
+    (other.class == self.class && @raw <=> other.raw)
+  end
+
   private
 
   def raw_string_for(str)
