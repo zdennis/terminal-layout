@@ -48,6 +48,18 @@ describe 'ANSIString' do
     end
   end
 
+  describe "#each_byte" do
+    let(:blue_ansi_string){ ANSIString.new blue_string }
+    let(:blue_string){ blue("this is blue") }
+
+    it "iterates over each character ignoring ANSI sequences" do
+      expected = "this is blue"
+      actual = ""
+      blue_ansi_string.each_byte { |ch| actual << ch }
+      expect(actual).to eq(expected)
+    end
+  end
+
   describe "#each_char" do
     let(:blue_ansi_string){ ANSIString.new blue_string }
     let(:blue_string){ blue("this is blue") }

@@ -4,7 +4,7 @@ class ANSIString
   extend Forwardable
   attr_reader :raw, :without_ansi
 
-  def_delegator :@without_ansi, :each_char
+  def_delegators :@without_ansi, :each_char, :each_byte
 
   def initialize(str)
     process_string raw_string_for(str)
