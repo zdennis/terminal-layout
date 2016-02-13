@@ -321,12 +321,12 @@ class ANSIString
         str << [location[:start_ansi_sequence], location[:text], location[:end_ansi_sequence]].join
 
       elsif location[:begins_at] >= range.begin && location[:begins_at] <= range.end
-        str << [location[:start_ansi_sequence], location[:text][range.begin..(range.end - location[:begins_at])], location[:end_ansi_sequence]].join
+        str << [location[:start_ansi_sequence], location[:text][0..(range.end - location[:begins_at])], location[:end_ansi_sequence]].join
 
       # If the location falls within the given range then  make sure we pull
       # out the bits that we want, and keep ANSI escape sequenece intact while
       # doing so.
-    elsif (location[:begins_at] <= range.begin && location[:ends_at] >= range.end) || range.cover?(location[:ends_at])
+      elsif (location[:begins_at] <= range.begin && location[:ends_at] >= range.end) || range.cover?(location[:ends_at])
         start_index = range.begin - location[:begins_at]
         end_index = range.end - location[:begins_at]
         str << [location[:start_ansi_sequence], location[:text][start_index..end_index], location[:end_ansi_sequence]].join

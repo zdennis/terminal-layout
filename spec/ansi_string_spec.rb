@@ -203,6 +203,11 @@ describe 'ANSIString' do
       expect(ansi_string[17..-5]).to eq yellow("is is ye")
     end
 
+    it "returns the correct substring when location of an ANSI sequence comes before the end of the request" do
+      s = ANSIString.new("ABC \e[7mGemfile.lock\e[0m LICENSE.txt  README.md")
+      expect(s[4...28]).to eq ANSIString.new("\e[7mGemfile.lock\e[0m LICENSE.txt")
+    end
+
     it "returns text that is not ANSI escaped" do
       expect(ansi_string[12..14]).to eq "ABC"
     end
