@@ -347,9 +347,12 @@ module TerminalLayout
     end
 
     def content=(str)
-      old = @content
-      @content = ANSIString.new(str)
-      emit :content_changed, old, @content
+      new_content = ANSIString.new(str)
+      if @content != new_content
+        old_content = @content
+        @content = new_content
+        emit :content_changed, old_content, @content
+      end
     end
 
     def position
@@ -402,9 +405,12 @@ module TerminalLayout
     end
 
     def content=(str)
-      old = @content
-      @content = ANSIString.new(str)
-      emit :content_changed, old, @content
+      new_content = ANSIString.new(str)
+      if @content != new_content
+        old_content = @content
+        @content = new_content
+        emit :content_changed, old_content, @content
+      end
     end
 
     def position=(position)
