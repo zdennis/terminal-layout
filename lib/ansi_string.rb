@@ -1,10 +1,13 @@
+# encoding: UTF-8
+
 require 'forwardable'
 
 class ANSIString
   extend Forwardable
   attr_reader :raw, :without_ansi
 
-  def_delegators :@without_ansi, :each_char, :each_byte
+  def_delegators :@without_ansi, :each_char, :each_byte, :index,
+    :match, :=~
 
   def initialize(str)
     process_string raw_string_for(str)
@@ -50,15 +53,6 @@ class ANSIString
     updated_string = replace_in_string(range_begin..range_end, replacement_str)
     process_string raw_string_for(updated_string)
     self
-  end
-
-  # See String#index for arguments
-  def index(*args)
-    @without_ansi.index(*args)
-  end
-
-  def match(*args, &blk)
-    @without_ansi.match(*args, &blk)
   end
 
   # See String#rindex for arguments

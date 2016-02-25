@@ -14,6 +14,13 @@ describe 'ANSIString' do
       ansi_string = ANSIString.new "this #{blue('is')} a string"
       expect(ansi_string).to be
     end
+
+    it "can be constructed with UTF-8 characters" do;
+      expect do
+        ansi_string = ANSIString.new "this #{blue('ƒ')} a string"
+        expect(ansi_string).to be
+      end.to_not raise_error
+    end
   end
 
   describe "redundant ANSI sequences" do
@@ -449,6 +456,14 @@ describe 'ANSIString' do
       string = "apples are bananas are they not?"
       ansi_string = ANSIString.new("app#{red('les are bananas')} are they not?")
       expect(ansi_string.match(/are/)).to eq(string.match(/are/))
+    end
+  end
+
+  describe "#=~" do
+    it "matches on a regex pattren" do
+      string = "apples are bananas are they not?"
+      ansi_string = ANSIString.new("app#{red('les are bananas')} are they not?")
+      expect(ansi_string =~ /are/).to eq(string =~ /are/)
     end
   end
 
