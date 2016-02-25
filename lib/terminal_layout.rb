@@ -471,6 +471,7 @@ module TerminalLayout
     end
 
     def dumb_render(object)
+      @previous_printable_content ||= ""
       @output.print @term_info.control_string "civis"
       move_up_n_rows @y
       move_to_beginning_of_row
@@ -481,16 +482,21 @@ module TerminalLayout
       end
 
       object_width = object.width
-      clear_screen_down
 
       rendered_content = object.render
       printable_content = rendered_content.sub(/\s*\Z/m, '')
 
-      printable_content.lines.each do |line|
-        move_to_beginning_of_row
-        @output.puts line
+      printable_content.lines.zip(@previous_printable_content.lines) do |new_line, previous_line|
+        if new_line != previous_line
+          term_info.control "el"
+          move_to_beginning_of_row
+          @output.puts new_line
+        else
+          move_down_n_rows 1
+        end
       end
       move_to_beginning_of_row
+      clear_screen_down
 
       # calculate lines drawn so we know where we are
       lines_drawn = (printable_content.length / object_width.to_f).ceil
@@ -501,6 +507,7 @@ module TerminalLayout
       render_cursor(input_box)
 
       @output.print @term_info.control_string "cnorm"
+      @previous_printable_content = printable_content
     end
 
     def find_input_box(dom_node)
