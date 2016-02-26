@@ -421,7 +421,11 @@ module TerminalLayout
 
     def update_computed(style)
       @computed.merge!(style)
-      @cursor_position.x = style[:x] + @cursor_offset_x
+      if style[:y] > 0
+        @cursor_position.x = @computed[:width] #@computed[:width] - (style[:x] + @cursor_offset_x)
+      else
+        @cursor_position.x = style[:x] + @cursor_offset_x
+      end
       @cursor_position.y = style[:y]
     end
   end
@@ -450,16 +454,28 @@ module TerminalLayout
       cursor_y = cursor_position.y
 
       # TODO: make this work when lines wrap
-      if cursor_x < 0
+      if cursor_x < 0 && cursor_y == 0
         cursor_x = terminal_width
         cursor_y -= 1
       elsif cursor_x >= terminal_width
+        cursor_y  = cursor_x / terminal_width
+        cursor_x -= terminal_width
       end
 
-      move_right_n_characters cursor_position.x
-      move_down_n_rows cursor_position.y
+      if @y < cursor_y
+        # moving backwards
+        move_up_n_rows(@y - cursor_y)
+      elsif @y > cursor_y
+        # moving forwards
+        move_down_n_rows(cursor_y - @y)
+      end
 
-      @y = input_box.cursor_position.y
+      move_down_n_rows cursor_y
+      move_to_beginning_of_row
+      move_right_n_characters cursor_x
+
+      @x = cursor_x
+      @y = cursor_y
     end
 
     def render(object)
@@ -471,7 +487,7 @@ module TerminalLayout
     end
 
     def dumb_render(object)
-      @previous_printable_content ||= ""
+      @previously_printed_lines ||= []
       @output.print @term_info.control_string "civis"
       move_up_n_rows @y
       move_to_beginning_of_row
@@ -486,7 +502,15 @@ module TerminalLayout
       rendered_content = object.render
       printable_content = rendered_content.sub(/\s*\Z/m, '')
 
-      printable_content.lines.zip(@previous_printable_content.lines) do |new_line, previous_line|
+      printable_lines = printable_content.split(/\n/).each_with_object([]) do |line, results|
+        if line.empty?
+          results << line
+        else
+          results.concat line.scan(/.{1,#{terminal_width}}/)
+        end
+      end
+
+      printable_lines.zip(@previously_printed_lines) do |new_line, previous_line|
         if new_line != previous_line
           term_info.control "el"
           move_to_beginning_of_row
@@ -507,7 +531,7 @@ module TerminalLayout
       render_cursor(input_box)
 
       @output.print @term_info.control_string "cnorm"
-      @previous_printable_content = printable_content
+      @previously_printed_lines = printable_lines
     end
 
     def find_input_box(dom_node)
