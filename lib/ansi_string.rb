@@ -72,6 +72,22 @@ class ANSIString
     ANSIString.new str
   end
 
+  def scan(pattern)
+    results = []
+    without_ansi.enum_for(:scan, pattern).each do
+      md = Regexp.last_match
+      if md.captures.any?
+        results << md.captures.map.with_index do |_, i|
+          # captures use 1-based indexing
+          self[md.begin(i+1)...md.end(i+1)]
+        end
+      else
+        results << self[md.begin(0)...md.end(0)]
+      end
+    end
+    results
+  end
+
   def slice(index, length=nil)
     range = nil
     index = index.without_ansi if index.is_a?(ANSIString)

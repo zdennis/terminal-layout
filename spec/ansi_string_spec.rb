@@ -467,6 +467,32 @@ describe 'ANSIString' do
     end
   end
 
+  describe "#scan" do
+    it "scans without capture groups" do
+      string = "567"
+      ansi_string = ANSIString.new("1234#{red('5678')}90")
+      expect(ansi_string.scan(/.{2}/)).to eq([
+        ANSIString.new("12"),
+        ANSIString.new("34"),
+        ANSIString.new("#{red('56')}"),
+        ANSIString.new("#{red('78')}"),
+        ANSIString.new("90")
+      ])
+    end
+
+    it "scans with capture groups" do
+      string = "567"
+      ansi_string = ANSIString.new("1234#{red('5678')}90")
+      expect(ansi_string.scan(/(.)./)).to eq([
+        [ANSIString.new("1")],
+        [ANSIString.new("3")],
+        [ANSIString.new("#{red('5')}")],
+        [ANSIString.new("#{red('7')}")],
+        [ANSIString.new("9")]
+      ])
+    end
+  end
+
   describe "#replace" do
     it "replaces the contents of the current string with the new string" do
       ansi_string = ANSIString.new("abc")
