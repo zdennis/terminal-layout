@@ -114,6 +114,22 @@ describe 'ANSIString' do
     end
   end
 
+  describe "#empty?" do
+    it "returns true when empty" do
+      expect(ANSIString.new("").empty?).to be(true)
+    end
+
+    it "returns true when it only contains ANSI sequences" do
+      expect(ANSIString.new(blue("")).empty?).to be(true)
+    end
+
+    it "returns false when there are non-ANSI characters" do
+      expect(ANSIString.new("a").empty?).to be(false)
+      expect(ANSIString.new(blue("a")).empty?).to be(false)
+    end
+
+  end
+
   describe "#index" do
     it "returns the index of the first occurrence of the given substring" do
       ansi_string = ANSIString.new("this is not blue")

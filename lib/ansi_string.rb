@@ -24,6 +24,10 @@ class ANSIString
     self
   end
 
+  def empty?
+    length == 0
+  end
+
   def [](range)
     # convert numeric position to a range
     range = (range..range) if range.is_a?(Integer)
