@@ -404,6 +404,14 @@ module TerminalLayout
       @cursor_position = OpenStruct.new(x: 0, y: 0)
     end
 
+    def cursor_off
+      @style.update(cursor: 'none')
+    end
+
+    def cursor_on
+      @style.update(cursor: 'auto')
+    end
+
     def content=(str)
       new_content = ANSIString.new(str)
       if @content != new_content
@@ -476,6 +484,12 @@ module TerminalLayout
 
       @x = cursor_x
       @y = cursor_y
+
+      if input_box.style[:cursor] == 'none'
+        @output.print @term_info.control_string "civis"
+      else
+        @output.print @term_info.control_string "cnorm"
+      end
     end
 
     def render(object)
@@ -527,10 +541,8 @@ module TerminalLayout
       @y = lines_drawn
 
       input_box = find_input_box(object.box)
-
       render_cursor(input_box)
 
-      @output.print @term_info.control_string "cnorm"
       @previously_printed_lines = printable_lines
     end
 
