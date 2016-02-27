@@ -355,6 +355,12 @@ module TerminalLayout
       end
     end
 
+    def children=(new_children)
+      old_children = @children
+      @children = new_children
+      emit :child_changed, old_children, new_children
+    end
+
     def position
       Position.new(x, y)
     end
