@@ -456,6 +456,7 @@ module TerminalLayout
     def initialize(output: $stdout)
       @output = output
       @term_info = TermInfo.new ENV["TERM"], @output
+      @previously_printed_lines = []
       @x, @y = 0, 0
     end
 
@@ -498,16 +499,15 @@ module TerminalLayout
       end
     end
 
-    def render(object)
-      dumb_render(object)
+    def render(object, reset: false)
+      dumb_render(object, reset: reset)
     end
 
-    def reset
-      @y = 0
-    end
-
-    def dumb_render(object)
-      @previously_printed_lines ||= []
+    def dumb_render(object, reset: false)
+      if reset
+        @y = 0
+        @previously_printed_lines.clear
+      end
       @output.print @term_info.control_string "civis"
       move_up_n_rows @y
       move_to_beginning_of_row
