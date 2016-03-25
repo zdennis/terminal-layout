@@ -335,8 +335,8 @@ module TerminalLayout
            emit :child_changed
          end
 
-         child.on(:cursor_position_changed) do |*args|
-           emit :cursor_position_changed
+         child.on(:position_changed) do |*args|
+           emit :position_changed
          end
        end
     end
@@ -402,12 +402,17 @@ module TerminalLayout
 
 
   class InputBox < Box
+    # cursor_position is the actual coordinates on the screen of where then
+    # cursor is rendered
     attr_accessor :cursor_position
+
+    # position is the desired X-position of the cursor if everything was
+    # displayed on a single line
+    attr_accessor :position
 
     def initialize(*args)
       super
       @computed = { x: 0, y: 0 }
-      @cursor_offset_x = 0
       @cursor_position = OpenStruct.new(x: 0, y: 0)
       @position = 0
     end
@@ -429,20 +434,21 @@ module TerminalLayout
       end
     end
 
-    def position=(position)
-      @cursor_offset_x = position
-      @cursor_position.x = @cursor_offset_x + @computed[:x]
-      emit :cursor_position_changed, nil, @cursor_position.x
+    def position=(new_position)
+      old_position = @position
+      @position = new_position
+      emit :position_changed, old_position, @position
     end
 
     def update_computed(style)
-      @computed.merge!(style)
-      if style[:y] > 0
-        @cursor_position.x = @computed[:width] #@computed[:width] - (style[:x] + @cursor_offset_x)
-      else
-        @cursor_position.x = style[:x] + @cursor_offset_x
+      # if the style being updated has a y greater than 0
+      # then it's because the renderable content for the input box
+      # spans multiple lines. We do not want to update the x/y position(s)
+      # in this instance. We want to keep the original starting x/y.
+      if style[:y] && style[:y] > 0
+        style = style.dup.delete_if { |k,_| [:x, :y].include?(k) }
       end
-      @cursor_position.y = style[:y]
+      @computed.merge!(style)
     end
   end
 
@@ -466,17 +472,32 @@ module TerminalLayout
       move_up_n_rows @y
       move_to_beginning_of_row
 
+      position = input_box.position
+
       cursor_position = input_box.cursor_position
       cursor_x = cursor_position.x
       cursor_y = cursor_position.y
 
-      # TODO: make this work when lines wrap
-      if cursor_x < 0 && cursor_y == 0
-        cursor_x = terminal_width
-        cursor_y -= 1
-      elsif cursor_x >= terminal_width
-        cursor_y  = cursor_x / terminal_width
-        cursor_x -= terminal_width
+      relative_position_on_row = position
+      initial_offset_x = input_box.computed[:x] + (input_box.computed[:y] * terminal_width)
+      cursor_x = 0
+      cursor_y = 0
+
+      absolute_position_on_row = relative_position_on_row + initial_offset_x
+      loop do
+        if absolute_position_on_row >= terminal_width
+          # reset offset
+          initial_offset_x = 0
+
+          absolute_position_on_row -= terminal_width
+
+          # move down a line
+          cursor_y += 1
+        else
+          # we fit on the current line
+          cursor_x = absolute_position_on_row
+          break
+        end
       end
 
       if @y < cursor_y
