@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    terminal-layout (0.1.0)
+    terminal-layout (0.2.0)
       highline
       ruby-terminfo (~> 0.1.1)
       ruby-termios (~> 0.9.6)
@@ -14,7 +14,7 @@ GEM
     coderay (1.1.0)
     columnize (0.9.0)
     diff-lcs (1.2.5)
-    highline (1.7.2)
+    highline (1.7.8)
     method_source (0.8.2)
     pry (0.10.1)
       coderay (~> 1.1.0)
@@ -57,4 +57,4 @@ DEPENDENCIES
   terminal-layout!
 
 BUNDLED WITH
-   1.10.4
+   1.11.2

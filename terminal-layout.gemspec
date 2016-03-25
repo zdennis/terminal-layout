@@ -4,7 +4,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
 Gem::Specification.new do |spec|
   spec.name          = "terminal-layout"
-  spec.version       = "0.1.1"
+  spec.version       = "0.2.0"
   spec.authors       = ["Zach Dennis"]
   spec.email         = ["zach.dennis@gmail.com"]
   spec.summary       = %q{A terminal layout manager}
