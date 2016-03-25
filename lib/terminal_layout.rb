@@ -406,8 +406,10 @@ module TerminalLayout
 
     def initialize(*args)
       super
+      @computed = { x: 0, y: 0 }
       @cursor_offset_x = 0
       @cursor_position = OpenStruct.new(x: 0, y: 0)
+      @position = 0
     end
 
     def cursor_off
