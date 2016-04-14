@@ -105,6 +105,32 @@ describe 'ANSIString' do
     end
   end
 
+  describe "#insert (see Ruby's String#insert for intent)" do
+    it "insert a string into the ANSIString" do
+      ansi_string = ANSIString.new "az"
+      ansi_string.insert 1, "thru"
+      expect(ansi_string).to eq ANSIString.new("athruz")
+
+      ansi_string.insert 0, "_"
+      expect(ansi_string).to eq ANSIString.new("_athruz")
+
+      ansi_string.insert ansi_string.length, "_"
+      expect(ansi_string).to eq ANSIString.new("_athruz_")
+    end
+
+    it "insert an ANSIString into an ANSIString" do
+      ansi_string = ANSIString.new blue("az")
+      ansi_string.insert 1, yellow("thru")
+      expect(ansi_string).to eq ANSIString.new("\e[34ma\e[33mthru\e[0mz\e[0m")
+    end
+
+    it "inserts from the end with a negative position" do
+      ansi_string = ANSIString.new blue("az")
+      ansi_string.insert -2, yellow("thru")
+      expect(ansi_string).to eq ANSIString.new("\e[34ma\e[33mthru\e[0mz\e[0m")
+    end
+  end
+
   describe "#length" do
     subject(:ansi_string){ ANSIString.new blue(string) }
     let(:string){ "this is blue" }

@@ -24,6 +24,14 @@ class ANSIString
     self
   end
 
+  def insert(position, string)
+    if position < 0
+      position = @without_ansi.length + position + 1
+    end
+    self[position...position] = string
+    self
+  end
+
   def empty?
     length == 0
   end
