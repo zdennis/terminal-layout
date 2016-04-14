@@ -41,14 +41,19 @@ class ANSIString
     range = (range..range) if range.is_a?(Integer)
 
     range_begin = range.begin
-    range_end = range.exclude_end? ? range.end - 1 : range.end
+    range_end = range.end
+    if range.end != range.begin
+      range_end = range.exclude_end? ? range.end - 1 : range.end
+    end
 
     range_begin = @without_ansi.length - range.begin.abs if range.begin < 0
     range_end = @without_ansi.length - range.end.abs if range.end < 0
 
-    str = build_string_with_ansi_for(range_begin..range_end)
-    if str
-      ANSIString.new str
+    if range_begin == 0 && range_end == 0 && range.exclude_end?
+      return ""
+    else
+      str = build_string_with_ansi_for(range_begin..range_end)
+      ANSIString.new str if str
     end
   end
 
@@ -91,22 +96,23 @@ class ANSIString
       if md.captures.any?
         results << md.captures.map.with_index do |_, i|
           # captures use 1-based indexing
-          self[md.begin(i+1)...md.end(i+1)]
+          self[md.begin(i+1)..md.end(i+1)-1]
         end
       else
-        results << self[md.begin(0)...md.end(0)]
+        results << self[md.begin(0)..md.end(0)-1]
       end
     end
     results
   end
 
   def slice(index, length=nil)
+    return ANSIString.new("") if length == 0
     range = nil
     index = index.without_ansi if index.is_a?(ANSIString)
     index = Regexp.new Regexp.escape(index) if index.is_a?(String)
     if index.is_a?(Integer)
-      length = index unless length
-      range = (index...index+length)
+      length ||= 1
+      range = (index..index+length-1)
     elsif index.is_a?(Range)
       range = index
     elsif index.is_a?(Regexp)
@@ -114,7 +120,7 @@ class ANSIString
       capture_group_index = length || 0
       if md
         capture_group = md.offset(capture_group_index)
-        range = (capture_group.first...capture_group.last)
+        range = (capture_group.first..capture_group.last-1)
       end
     else
       raise(ArgumentError, "Must pass in at least an index or a range.")

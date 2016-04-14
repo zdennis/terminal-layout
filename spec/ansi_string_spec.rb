@@ -566,6 +566,7 @@ describe 'ANSIString' do
 
     it "returns a substring of characters of N length given a start index and max length N" do
       ansi_string = ANSIString.new("a#{blue('b')}c")
+      expect(ansi_string.slice(0, 0)).to eq ANSIString.new("")
       expect(ansi_string.slice(0, 2)).to eq ANSIString.new("a#{blue('b')}")
       expect(ansi_string.slice(1, 2)).to eq ANSIString.new("#{blue('b')}c")
 
