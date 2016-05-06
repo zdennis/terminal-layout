@@ -1,10 +1,11 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+require 'terminal_layout/version'
 
 Gem::Specification.new do |spec|
   spec.name          = "terminal-layout"
-  spec.version       = "0.2.0"
+  spec.version       = TerminalLayout::VERSION
   spec.authors       = ["Zach Dennis"]
   spec.email         = ["zach.dennis@gmail.com"]
   spec.summary       = %q{A terminal layout manager}
@@ -17,8 +18,8 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
 
-  spec.add_dependency  "ruby-terminfo", "~> 0.1.1"
-  spec.add_dependency  "ruby-termios", "~> 0.9.6"
+  spec.add_dependency "ruby-terminfo", "~> 0.1.1"
+  spec.add_dependency "ruby-termios", "~> 0.9.6"
   spec.add_dependency "highline"
 
   spec.add_development_dependency "bundler", "~> 1.7"
