@@ -325,20 +325,7 @@ module TerminalLayout
       @computed = {}
 
       initialize_defaults
-
-       @children.each do |child|
-         child.on(:content_changed) do |*args|
-           emit :child_changed
-         end
-
-         child.on(:child_changed) do |*args|
-           emit :child_changed
-         end
-
-         child.on(:position_changed) do |*args|
-           emit :position_changed
-         end
-       end
+      subscribe_to_events_on_children
     end
 
     %w(width height display x y float).each do |method|
@@ -356,8 +343,10 @@ module TerminalLayout
     end
 
     def children=(new_children)
+      unsubscribe_from_events_on_children
       old_children = @children
       @children = new_children
+      subscribe_to_events_on_children
       emit :child_changed, old_children, new_children
     end
 
@@ -398,6 +387,28 @@ module TerminalLayout
     def initialize_defaults
       style.has_key?(:display) || style[:display] = :block
     end
+
+    private
+
+    def unsubscribe_from_events_on_children
+      @children.each do |child|
+        child.unsubscribe
+      end
+    end
+
+    def subscribe_to_events_on_children
+      @children.each do |child|
+        child.on(:content_changed) do |*args|
+          emit :child_changed
+        end
+        child.on(:child_changed) do |*args|
+          emit :child_changed
+        end
+        child.on(:position_changed) do |*args|
+          emit :position_changed
+        end
+      end
+    end    
   end
 
 
