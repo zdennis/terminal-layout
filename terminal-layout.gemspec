@@ -21,6 +21,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "ruby-terminfo", "~> 0.1.1"
   spec.add_dependency "ruby-termios", "~> 0.9.6"
   spec.add_dependency 'highline', '~> 1.7', '>= 1.7.8'
+  spec.add_dependency "treefell", "~> 0.2.3"
 
   spec.add_development_dependency "bundler", "~> 1.7"
   spec.add_development_dependency "rake", "~> 10.0"

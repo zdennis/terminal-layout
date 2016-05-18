@@ -5,6 +5,7 @@ PATH
       highline (~> 1.7, >= 1.7.8)
       ruby-terminfo (~> 0.1.1)
       ruby-termios (~> 0.9.6)
+      treefell (~> 0.2.3)
 
 GEM
   remote: https://rubygems.org/
@@ -43,6 +44,8 @@ GEM
     term-ansicolor (1.3.0)
       tins (~> 1.0)
     tins (1.3.5)
+    treefell (0.2.3)
+      term-ansicolor (~> 1.3)
 
 PLATFORMS
   ruby
