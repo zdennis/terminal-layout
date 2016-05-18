@@ -207,6 +207,10 @@ class ANSIString
   end
   alias :to_str :to_s
 
+  def inspect
+    to_s.inspect
+  end
+
   def ==(other)
     (other.class == self.class && other.raw == @raw) || (other.kind_of?(String) && other == @raw)
   end

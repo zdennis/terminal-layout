@@ -681,6 +681,15 @@ describe 'ANSIString' do
     end
   end
 
+  describe "#inspect" do
+    subject(:ansi_string){ ANSIString.new blue(string) }
+    let(:string){ "this is blue" }
+
+    it "returns a quoted version of the strong" do
+      expect(ansi_string.inspect).to eq "\"\\e[34mthis is blue\\e[0m\""
+    end
+  end
+
   describe "#succ" do
     it "needs to be implemented"
   end
