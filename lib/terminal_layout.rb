@@ -408,7 +408,7 @@ module TerminalLayout
           emit :position_changed
         end
       end
-    end    
+    end
   end
 
 
@@ -566,9 +566,13 @@ module TerminalLayout
 
       printable_lines.zip(@previously_printed_lines) do |new_line, previous_line|
         if new_line != previous_line
+          # be sure to reset the terminal at the outset of every line
+          # because we don't know what state the previous line ended in
+          line2print = "#{new_line}\e[0m"
           term_info.control "el"
           move_to_beginning_of_row
-          @output.puts new_line
+          Treefell['render'].puts "printing line=#{line2print.inspect}"
+          @output.puts line2print
         else
           move_down_n_rows 1
         end
