@@ -80,7 +80,7 @@ module TerminalLayout
 
       define_method("#{method}=") do |value|
         style[method.to_sym] = value
-        @box.computed[method] = value
+        @box.computed[method.to_sym] = value
       end
     end
 
