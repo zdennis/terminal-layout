@@ -592,6 +592,14 @@ module TerminalLayout
       dumb_render(object, reset: reset)
     end
 
+    def find_top_of_tree(object)
+      loop do
+        break unless object.parent
+        object = object.parent
+      end
+      object
+    end
+
     def dumb_render(object, reset: false)
       if reset
         @y = 0
@@ -601,10 +609,7 @@ module TerminalLayout
       move_up_n_rows @y
       move_to_beginning_of_row
 
-      loop do
-        break unless object.parent
-        object = object.parent
-      end
+      object = find_top_of_tree(object)
 
       object_width = object.width
 
