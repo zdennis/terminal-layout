@@ -439,6 +439,9 @@ module TerminalLayout
         child.on(:position_changed) do |*args|
           emit :position_changed
         end
+        child.on(:focused_changed) do |*args|
+          emit :focused_changed, *args
+        end
       end
     end
   end
@@ -453,11 +456,26 @@ module TerminalLayout
     # displayed on a single line
     attr_accessor :position
 
+    def focus!
+      return if @focused
+      @focused = true
+      emit :focus_changed, !@focused, @focused
+    end
+
+    def remove_focus!
+      return unless @focused
+      @focused = false
+      emit :focus_changed, !@focused, @focused
+    end
+
+    def focused? ; !!@focused ; end
+
     def initialize(*args)
       super
       @computed = { x: 0, y: 0 }
       @cursor_position = OpenStruct.new(x: 0, y: 0)
       @position = 0
+      @focused = false
     end
 
     def cursor_off
