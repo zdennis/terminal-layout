@@ -371,6 +371,17 @@ module TerminalLayout
       emit :child_changed, old_children, new_children
     end
 
+    def find_child_of_type(type, &block)
+      children.each do |child|
+        matches = child.is_a?(type)
+        matches &= block.call(child) if matches && block
+        return child if matches
+        child_matches = child.find_child_of_type(type, &block)
+        return child_matches if child_matches
+      end
+      nil
+    end
+
     def position
       Position.new(x, y)
     end
@@ -609,16 +620,12 @@ module TerminalLayout
       lines_drawn = (printable_content.length / object_width.to_f).ceil
       @y = lines_drawn
 
-      input_box = find_input_box(object.box)
+      input_box = object.box.find_child_of_type(InputBox) do |box|
+        box.focused?
+      end
       render_cursor(input_box)
 
       @previously_printed_lines = printable_lines
-    end
-
-    def find_input_box(dom_node)
-      dom_node.children.detect do |child|
-        child.is_a?(InputBox) || find_input_box(child)
-      end
     end
 
     def clear_to_beginning_of_line ; term_info.control "el1" ; end
