@@ -109,7 +109,7 @@ module TerminalLayout
     end
 
     def to_s
-      "<#{self.class.name} position=(#{x},#{y}) dimensions=#{width}x#{height} content=#{content}/>"
+      "<#{self.class.name} position=(#{x},#{y}) dimensions=#{width}x#{height} content=#{content} name=#{@box.name}/>"
     end
 
     def render
@@ -316,7 +316,7 @@ module TerminalLayout
   class Box
     include EventEmitter
 
-    attr_accessor :style, :children, :content, :computed
+    attr_accessor :style, :children, :content, :computed, :name
 
     def initialize(style:{}, children:[], content:"")
       @style = style
@@ -375,7 +375,7 @@ module TerminalLayout
     end
 
     def to_s
-      "<Box##{object_id} position=(#{x},#{y})  dimensions=#{width}x#{height} display=#{display.inspect} content=#{content}/>"
+      "<#{self.class}##{object_id} position=(#{x},#{y}) dimensions=#{width}x#{height} display=#{display.inspect} content=#{content} name=#{@name}/>"
     end
 
     def update_computed(style)
