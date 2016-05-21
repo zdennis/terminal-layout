@@ -245,6 +245,10 @@ module TerminalLayout
         end
       end
 
+      self.children.each do |child|
+        child.box.computed[:x] += x
+        child.box.computed[:y] += y
+      end
       Treefell['render'].puts "laid out box=#{box.name} render-object=#{self.children}"
 
       self.children
