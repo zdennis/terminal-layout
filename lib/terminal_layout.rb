@@ -446,7 +446,6 @@ module TerminalLayout
     end
   end
 
-
   class InputBox < Box
     # cursor_position is the actual coordinates on the screen of where then
     # cursor is rendered
