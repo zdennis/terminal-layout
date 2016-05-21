@@ -204,7 +204,18 @@ module TerminalLayout
           loop do
             partial_content = cbox.content[content_i...(content_i + available_width)]
             chars_needed = partial_content.length
-            self.children << render_object_for(cbox, content:partial_content, style: {display: :inline, x:@current_x, y: @current_y, width:chars_needed, height:1})
+            Treefell['render'].puts "laying out inline #{cbox.name} @current_x=#{@current_x} @current_y=#{@current_y} x=#{x} y=#{y}"
+            self.children << render_object_for(
+              cbox,
+              content:partial_content,
+              style: {
+                display: :inline,
+                x: @current_x,
+                y: @current_y,
+                width:chars_needed,
+                height:1
+              }
+            )
 
             content_i += chars_needed
 
