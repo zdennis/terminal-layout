@@ -136,6 +136,7 @@ module TerminalLayout
     end
 
     def layout
+      Treefell['render'].puts "layout #{self.inspect}"
       self.children = []
       @current_x = 0
       @current_y = 0
@@ -151,6 +152,7 @@ module TerminalLayout
       end
 
       children2crawl.each do |cbox|
+        Treefell['render'].puts "layout crawling children #{cbox.inspect}"
         if cbox.display == :float
           next if cbox.width.to_i == 0
 
@@ -229,6 +231,8 @@ module TerminalLayout
           self.height = @box.height || 0
         end
       end
+
+      Treefell['render'].puts "laid out box=#{box.name} render-object=#{self.children}"
 
       self.children
     end
@@ -480,6 +484,8 @@ module TerminalLayout
     end
 
     def render_cursor(input_box)
+      Treefell['render'].puts "render cursor at box=#{input_box.inspect} computed=#{input_box.computed.inspect}"
+
       move_up_n_rows @y
       move_to_beginning_of_row
 
@@ -525,6 +531,8 @@ module TerminalLayout
 
       @x = cursor_x
       @y = cursor_y
+
+      Treefell['render'].puts "rendering cursor at x=#{@x} y=#{@y}"
 
       if input_box.style[:cursor] == 'none'
         @output.print @term_info.control_string "civis"
