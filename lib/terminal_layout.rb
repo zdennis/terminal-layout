@@ -507,6 +507,7 @@ module TerminalLayout
       # spans multiple lines. We do not want to update the x/y position(s)
       # in this instance. We want to keep the original starting x/y.
       if style[:y] && style[:y] > 0
+        Treefell['render'].puts "update_computed received a y > 0. Removing Y from update."
         style = style.dup.delete_if { |k,_| [:x, :y].include?(k) }
       end
       @computed.merge!(style)
