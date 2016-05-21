@@ -177,10 +177,12 @@ module TerminalLayout
             available_width = ending_x_for_current_y - @current_x
           end
 
-          render_object = render_object_for(cbox, content:nil, style: {width: (cbox.width || available_width)})
+          render_object = render_object_for(cbox, content:nil, style: {
+            x: @current_x,
+            y: @current_y,
+            width: (cbox.width || available_width)
+          })
           render_object.layout
-          render_object.x = @current_x
-          render_object.y = @current_y
 
           if cbox.height
             render_object.height = cbox.height
