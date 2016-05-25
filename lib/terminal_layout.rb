@@ -630,6 +630,7 @@ module TerminalLayout
           line2print = "#{new_line}\e[0m"
           term_info.control "el"
           move_to_beginning_of_row
+          term_info.control "el"
           Treefell['render'].puts "printing line=#{line2print.inspect}"
           @output.puts line2print
         else
