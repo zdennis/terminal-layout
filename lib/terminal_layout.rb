@@ -432,7 +432,7 @@ module TerminalLayout
     def subscribe_to_events_on_children
       @children.each do |child|
         child.on(:content_changed) do |*args|
-          emit :child_changed
+          emit :content_changed
         end
         child.on(:child_changed) do |*args|
           emit :child_changed
