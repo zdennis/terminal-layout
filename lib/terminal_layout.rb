@@ -1,5 +1,6 @@
 require 'ansi_string'
 require 'ostruct'
+require 'treefell'
 
 module TerminalLayout
   Dimension = Struct.new(:width, :height)
