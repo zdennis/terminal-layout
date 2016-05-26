@@ -261,6 +261,11 @@ describe 'ANSIString' do
       expect(ansi_string[12..14]).to eq "ABC"
     end
 
+    it "returns dos thine" do
+      ansi_string = ANSIString.new("ABC")
+      expect(ansi_string[0...1]).to eq "A"
+    end
+
     it "returns up to the end" do
       expect(ansi_string[-2..-1]).to eq yellow("ow")
     end

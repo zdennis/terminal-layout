@@ -42,19 +42,20 @@ class ANSIString
 
     range_begin = range.begin
     range_end = range.end
-    if range.end != range.begin
-      range_end = range.exclude_end? ? range.end - 1 : range.end
+
+    if range.exclude_end?
+      if range_begin == 0 && range_end == 0
+        return ""
+      else
+        range_end -= 1
+      end
     end
 
     range_begin = @without_ansi.length - range.begin.abs if range.begin < 0
     range_end = @without_ansi.length - range.end.abs if range.end < 0
 
-    if range_begin == 0 && range_end == 0 && range.exclude_end?
-      return ""
-    else
-      str = build_string_with_ansi_for(range_begin..range_end)
-      ANSIString.new str if str
-    end
+    str = build_string_with_ansi_for(range_begin..range_end)
+    ANSIString.new str if str
   end
 
   def []=(range, replacement_str)
