@@ -18,6 +18,7 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
 
+  spec.add_dependency 'ansi_string', '~> 0.1'
   spec.add_dependency "ruby-terminfo", "~> 0.1.1"
   spec.add_dependency "ruby-termios", "~> 0.9.6"
   spec.add_dependency 'highline', '~> 1.7', '>= 1.7.8'

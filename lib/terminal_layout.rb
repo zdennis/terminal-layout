@@ -1,5 +1,5 @@
-require 'ansi_string'
 require 'ostruct'
+require 'ansi_string'
 require 'treefell'
 
 module TerminalLayout
