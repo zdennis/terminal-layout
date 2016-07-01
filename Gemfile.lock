@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    terminal-layout (0.4.1)
+    terminal-layout (0.4.2)
       ansi_string (~> 0.1)
       highline (~> 1.7, >= 1.7.8)
       ruby-terminfo (~> 0.1.1)
