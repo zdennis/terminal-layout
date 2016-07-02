@@ -137,7 +137,6 @@ module TerminalLayout
     end
 
     def layout
-      Treefell['render'].puts "layout #{self.inspect}"
       self.children = []
       @current_x = 0
       @current_y = 0
@@ -153,7 +152,6 @@ module TerminalLayout
       end
 
       children2crawl.each do |cbox|
-        Treefell['render'].puts "layout crawling children #{cbox.inspect}"
         if cbox.display == :float
           next if cbox.width.to_i == 0
 
@@ -205,7 +203,6 @@ module TerminalLayout
           loop do
             partial_content = cbox.content[content_i...(content_i + available_width)]
             chars_needed = partial_content.length
-            Treefell['render'].puts "laying out inline #{cbox.name} @current_x=#{@current_x} @current_y=#{@current_y} x=#{x} y=#{y}"
             self.children << render_object_for(
               cbox,
               content:partial_content,
@@ -250,7 +247,6 @@ module TerminalLayout
         child.box.computed[:x] += x
         child.box.computed[:y] += y
       end
-      Treefell['render'].puts "laid out box=#{box.name} render-object=#{self.children}"
 
       self.children
     end
@@ -507,7 +503,6 @@ module TerminalLayout
       # spans multiple lines. We do not want to update the x/y position(s)
       # in this instance. We want to keep the original starting x/y.
       if style[:y] && style[:y] > 0
-        Treefell['render'].puts "update_computed received a y > 0. Removing Y from update."
         style = style.dup.delete_if { |k,_| [:x, :y].include?(k) }
       end
       @computed.merge!(style)
@@ -531,8 +526,7 @@ module TerminalLayout
     end
 
     def render_cursor(input_box)
-      Treefell['render'].puts "render cursor at box=#{input_box.inspect} computed=#{input_box.computed.inspect}"
-
+      Treefell['render'].puts %|\nCURSOR RENDER: #{self.class}##{__callee__} caller=#{caller[0..5].join("\n")}}|
       move_up_n_rows @y
       move_to_beginning_of_row
 
@@ -579,8 +573,6 @@ module TerminalLayout
       @x = cursor_x
       @y = cursor_y
 
-      Treefell['render'].puts "rendering cursor at x=#{@x} y=#{@y}"
-
       if input_box.style[:cursor] == 'none'
         @output.print @term_info.control_string "civis"
       else
@@ -600,14 +592,30 @@ module TerminalLayout
       object
     end
 
+    def fullzip(a, b, &blk)
+      results = if a.length >= b.length
+        a.zip(b)
+      else
+        b.zip(a).map(&:reverse)
+      end
+      if block_given?
+        results.each { |*args| blk.call(*args) }
+      else
+        results
+      end
+    end
+
     def dumb_render(object, reset: false)
+      Treefell['render'].puts %|\nDUMB RENDER: #{self.class}##{__callee__} reset=#{reset} caller=#{caller[0..5].join("\n")}}|
       if reset
         @y = 0
         @previously_printed_lines.clear
+      else
+        move_up_n_rows @y
+        move_to_beginning_of_row
+        @y = 0
       end
       @output.print @term_info.control_string "civis"
-      move_up_n_rows @y
-      move_to_beginning_of_row
 
       object = find_top_of_tree(object)
 
@@ -615,7 +623,6 @@ module TerminalLayout
 
       rendered_content = object.render
       printable_content = rendered_content.sub(/\s*\Z/m, '')
-
       printable_lines = printable_content.split(/\n/).each_with_object([]) do |line, results|
         if line.empty?
           results << line
@@ -624,20 +631,23 @@ module TerminalLayout
         end
       end
 
-      printable_lines.zip(@previously_printed_lines) do |new_line, previous_line|
-        if new_line != previous_line
+      i = 0
+      fullzip(printable_lines, @previously_printed_lines) do |new_line, previous_line|
+        i += 1
+        if new_line && new_line != previous_line
           # be sure to reset the terminal at the outset of every line
           # because we don't know what state the previous line ended in
           line2print = "#{new_line}\e[0m"
           term_info.control "el"
           move_to_beginning_of_row
           term_info.control "el"
-          Treefell['render'].puts "printing line=#{line2print.inspect}"
           @output.puts line2print
-        else
+          move_to_beginning_of_row
+        elsif i <= printable_lines.length
           move_down_n_rows 1
         end
       end
+
       move_to_beginning_of_row
       clear_screen_down
 
